@@ -13,7 +13,10 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -45,52 +48,91 @@ def _literal(texto: str) -> str:
     return "'" + texto.replace("'", "''") + "'"
 
 
+@dataclass(frozen=True)
+class VersionDatos:
+    base: Path
+    con: duckdb.DuckDBPyConnection
+    metadata: MetadataArchivo
+    celdas: int
+    provincias: int
+
+
 class Datos:
     """Estado de los datos de un worker."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._con: duckdb.DuckDBPyConnection | None = None
+        self._actual: VersionDatos | None = None
+        self._peticion: ContextVar[tuple[VersionDatos | None] | None] = ContextVar(
+            "version_datos", default=None
+        )
+        self._recarga = threading.Lock()
         self._cupos = threading.BoundedSemaphore(settings.max_consultas_concurrentes)
-        self.metadata: MetadataArchivo | None = None
-        self.celdas_total = 0
-        self.provincias_total = 0
         self.error: str | None = None
+
+    @contextmanager
+    def fijar_version(self) -> Iterator[None]:
+        # La petición conserva una referencia a la conexión hasta terminar sus consultas.
+        token = self._peticion.set((self._actual,))
+        try:
+            yield
+        finally:
+            self._peticion.reset(token)
+
+    @property
+    def _version(self) -> VersionDatos | None:
+        fijada = self._peticion.get()
+        return self._actual if fijada is None else fijada[0]
+
+    @property
+    def metadata(self) -> MetadataArchivo | None:
+        version = self._version
+        return version.metadata if version else None
 
     @property
     def listo(self) -> bool:
-        return self._con is not None and self.metadata is not None
+        return self._version is not None
 
     @property
     def data_version(self) -> str | None:
-        return self.metadata.data_version if self.metadata else None
+        meta = self.metadata
+        return meta.data_version if meta else None
 
-    def abrir(self) -> None:
-        """Abre una conexión nueva sobre ``DATA_DIR``. Si falla, queda en estado degradado."""
-        try:
-            con, metadata, celdas, provincias = self._conectar()
-        except Exception as exc:  # cualquier falla deja la API levantada pero degradada
-            log.error("No se pudieron abrir los datos en %s: %s", self._settings.data_dir, exc)
-            self.error = str(exc)
-            self.cerrar()
-            return
-        anterior = self._con
-        self._con, self.metadata = con, metadata
-        self.celdas_total, self.provincias_total = celdas, provincias
-        self.error = None
-        if anterior is not None:
-            anterior.close()
-        log.info("Datos abiertos: data_version=%s", metadata.data_version)
+    @property
+    def celdas_total(self) -> int:
+        version = self._version
+        return version.celdas if version else 0
+
+    @property
+    def provincias_total(self) -> int:
+        version = self._version
+        return version.provincias if version else 0
+
+    def abrir(self, *, solo_si_cambio: bool = False) -> bool:
+        """Publica una versión completa y conserva la anterior si la apertura falla."""
+        with self._recarga:
+            try:
+                base = self._settings.data_dir.resolve(strict=True)
+                if solo_si_cambio and self._actual and self._actual.base == base:
+                    return True
+                version = self._conectar(base)
+            except Exception as exc:
+                if self.error != str(exc):
+                    log.error(
+                        "No se pudieron abrir los datos en %s: %s", self._settings.data_dir, exc
+                    )
+                self.error = str(exc)
+                return False
+            self._actual = version
+            self.error = None
+            log.info("Datos abiertos: data_version=%s", version.metadata.data_version)
+            return True
 
     def cerrar(self) -> None:
-        if self._con is not None:
-            self._con.close()
-        self._con = None
-        self.metadata = None
+        with self._recarga:
+            self._actual = None
 
-    def _conectar(self) -> tuple[duckdb.DuckDBPyConnection, MetadataArchivo, int, int]:
-        # Se resuelve el symlink "current" para que la conexión quede fija en una versión.
-        base = Path(self._settings.data_dir).resolve(strict=True)
+    def _conectar(self, base: Path) -> VersionDatos:
         try:
             crudo = json.loads((base / "metadata.json").read_text(encoding="utf-8"))
             metadata = MetadataArchivo.model_validate(crudo)
@@ -126,7 +168,7 @@ class Datos:
         except Exception:
             con.close()
             raise
-        return con, metadata, (celdas or (0,))[0], (provincias or (0,))[0]
+        return VersionDatos(base, con, metadata, (celdas or (0,))[0], (provincias or (0,))[0])
 
     def consultar(
         self, sql: str, parametros: list[Any] | dict[str, Any] | None = None
@@ -184,20 +226,22 @@ class Datos:
         parametros: list[Any] | dict[str, Any] | None,
         leer: Callable[[duckdb.DuckDBPyConnection], T],
     ) -> T:
-        con = self._con
-        if con is None:
+        version = self._version
+        if version is None:
             raise datos_no_disponibles()
         limite = self._settings.query_timeout_s
         if not self._cupos.acquire(timeout=limite):
             raise tiempo_excedido(limite)
-        cursor = con.cursor()
-        reloj = threading.Timer(limite, cursor.interrupt)
         try:
-            reloj.start()
-            return leer(cursor.execute(sql, parametros))
-        except duckdb.InterruptException as exc:
-            raise tiempo_excedido(limite) from exc
+            cursor = version.con.cursor()
+            reloj = threading.Timer(limite, cursor.interrupt)
+            try:
+                reloj.start()
+                return leer(cursor.execute(sql, parametros))
+            except duckdb.InterruptException as exc:
+                raise tiempo_excedido(limite) from exc
+            finally:
+                reloj.cancel()
+                cursor.close()
         finally:
-            reloj.cancel()
-            cursor.close()
             self._cupos.release()

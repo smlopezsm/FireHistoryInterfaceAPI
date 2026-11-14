@@ -110,6 +110,14 @@ Para usar datos reales, montá su carpeta en lugar de `data/demo`.
 Si faltan los datos, la API levanta igual: `/health` responde `estado: degradado` y los
 endpoints de datos devuelven `503 DATOS_NO_DISPONIBLES`.
 
+## Actualizar el paquete de datos
+
+En producción, cada worker verifica cada cinco segundos si el enlace `current` apunta a
+otra versión. El pipeline también puede solicitar una recarga inmediata al worker que
+recibe `POST /api/v1/admin/reload` con `Authorization: Bearer <RELOAD_TOKEN>`.
+Mantené disponible la carpeta anterior mientras terminan las consultas iniciadas sobre ella.
+Ver [despliegue](docs/05-despliegue.md).
+
 ## Licencia y datos
 
 Datos de focos: NASA FIRMS (MODIS C6.1, VIIRS 375 m). Límites: IGN, vía API Georef. Ver la sección de citas en [docs/02](docs/02-contratos-de-datos.md#fuentes-y-citas).

@@ -220,7 +220,7 @@ y el percentil.
 
 - **Cabecera:** `Authorization: Bearer <RELOAD_TOKEN>`.
 - **Qué hace:** reabre la conexión DuckDB **del worker que recibe la llamada** sobre `/var/data/current`. Como Uvicorn corre con 2 workers, además cada worker revisa cada pocos segundos a qué versión apunta el symlink `current` y, si cambió, reabre su conexión por su cuenta. Las consultas en curso terminan sobre la versión anterior.
-- **Respuestas:** `204`, o `401` / `403` si el token no es válido.
+- **Respuestas:** `204` si se cargó la versión, `401` sin credencial Bearer, `403` si el token es incorrecto y `503` si no se pudo abrir el paquete. Si falla la apertura, el worker conserva la última versión válida.
 
 ---
 

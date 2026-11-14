@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +15,7 @@ from app.config import Settings, get_settings
 from app.db import Datos
 from app.errores import registrar_manejadores
 from app.limites import LimiteBodyMiddleware
-from app.routers import anomalia, armonizacion, descargas, health, mapa, metadata, provincias
+from app.routers import admin, anomalia, armonizacion, descargas, health, mapa, metadata, provincias
 
 PREFIJO = "/api/v1"
 
@@ -56,10 +57,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         datos = Datos(config)
         datos.abrir()
         app.state.datos = datos
+
+        async def revisar_version() -> None:
+            while True:
+                await asyncio.sleep(5)
+                await asyncio.to_thread(datos.abrir, solo_si_cambio=True)
+
+        monitor = asyncio.create_task(revisar_version())
         try:
             yield
         finally:
-            datos.cerrar()
+            monitor.cancel()
+            with suppress(asyncio.CancelledError):
+                await monitor
+            await asyncio.to_thread(datos.cerrar)
 
     app = FastAPI(
         title="FireHistoryInterfaceAPI",
@@ -92,6 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(anomalia.router, prefix=PREFIJO)
     app.include_router(mapa.router, prefix=PREFIJO)
     app.include_router(descargas.router, prefix=PREFIJO)
+    app.include_router(admin.router, prefix=PREFIJO)
     return app
 
 

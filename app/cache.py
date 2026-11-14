@@ -14,7 +14,14 @@ SIN_CACHE = ("/api/v1/health", "/api/v1/admin/")
 class CacheMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         datos = getattr(request.app.state, "datos", None)
-        version = datos.data_version if datos is not None else None
+        if datos is None:
+            return await call_next(request)
+        with datos.fijar_version():
+            return await self._con_version(request, call_next, datos.data_version)
+
+    async def _con_version(
+        self, request: Request, call_next: RequestResponseEndpoint, version: str | None
+    ) -> Response:
         cacheable = (
             request.method in ("GET", "HEAD")
             and request.url.path.startswith("/api/v1/")
