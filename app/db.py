@@ -21,7 +21,7 @@ import duckdb
 from pydantic import ValidationError
 
 from app.config import Settings
-from app.errores import datos_no_disponibles, tiempo_excedido
+from app.errores import ApiError, datos_no_disponibles, tiempo_excedido
 from app.schemas.metadata import MetadataArchivo
 
 log = logging.getLogger(__name__)
@@ -138,6 +138,39 @@ class Datos:
             return [dict(zip(columnas, fila, strict=True)) for fila in resultado.fetchall()]
 
         return self._ejecutar(sql, parametros, _filas)
+
+    def exportar_filas(
+        self,
+        filtro: str,
+        columnas: str,
+        parametros: list[Any],
+        maximo: int,
+        escribir: Callable[[list[tuple[Any, ...]]], object],
+    ) -> None:
+        """Cuenta y exporta en lotes con el mismo cursor y presupuesto de consulta."""
+
+        def exportar(cursor: duckdb.DuckDBPyConnection) -> None:
+            conteo = cursor.fetchone()
+            assert conteo is not None
+            if conteo[0] > maximo:
+                raise ApiError(
+                    413,
+                    "RESULTADO_DEMASIADO_GRANDE",
+                    "La descarga supera el máximo de filas. Achicá la zona o el período.",
+                )
+            cursor.execute(f"SELECT {columnas} {filtro} LIMIT ?", [*parametros, maximo + 1])
+            restantes = maximo
+            while filas := cursor.fetchmany(4096):
+                restantes -= len(filas)
+                if restantes < 0:
+                    raise ApiError(
+                        413,
+                        "RESULTADO_DEMASIADO_GRANDE",
+                        "La descarga supera el máximo de filas. Achicá la zona o el período.",
+                    )
+                escribir(filas)
+
+        self._ejecutar(f"SELECT count(*) {filtro}", parametros, exportar)
 
     def consultar_columnas(
         self, sql: str, parametros: list[Any] | dict[str, Any] | None = None
