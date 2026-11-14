@@ -108,7 +108,20 @@ Una fila = **provincia × mes calendario** (24 × 12 = 288 filas por tipo).
 | `n_modis_calib` | `INT32` | No | Focos MODIS usados en la calibración (confianza) | `1840` |
 | `factores_version` | `VARCHAR` | No | Versión de la tabla | `2026.11-b1` |
 
-**Regla:** si falta una combinación (por ejemplo, CABA en un mes sin datos), la API usa el factor de la región para ese mes; si tampoco existe, el nacional.
+**Regla:** si falta una combinación (por ejemplo, CABA en un mes sin datos), la API usa el factor de la región para ese mes, tomado de `factores_region_mes.parquet` (§5.1); si tampoco existe, el nacional (`region = Argentina`). En ese caso la API informa `nivel_origen = region` o `pais`.
+
+### 5.1 `factores_region_mes.parquet` — factores de respaldo por región y nacional
+
+Una fila = **región × mes calendario**, más el nivel nacional (6 × 12 = 72 filas por tipo). La API **solo** los usa cuando falta una combinación en `factores_provincia_mes.parquet`.
+
+| Columna | Tipo | Nulo | Descripción | Ejemplo |
+|---|---|---|---|---|
+| `region` | `VARCHAR` | No | `NOA`, `NEA`, `Pampeana`, `Cuyo`, `Patagonia` o `Argentina` (nivel nacional) | `Cuyo` |
+| `mes` | `INT8` | No | 1–12 | `6` |
+| `tipo` | `VARCHAR` | No | `modis` o `terra` (igual que en §5) | `modis` |
+| `factor` | `FLOAT` | No | Focos VIIRS (S-NPP) por cada foco MODIS en la región | `3.10` |
+| `n_modis_calib` | `INT32` | No | Focos MODIS usados en la calibración | `9120` |
+| `factores_version` | `VARCHAR` | No | Igual que en §5 | `2026.11-b1` |
 
 ---
 
@@ -195,6 +208,7 @@ Versión inicial: **488 puntos** (80.681 focos excluidos). La API lo expone como
 | Conteos | Todos los `n_*` ≥ 0 y al menos uno > 0 por fila |
 | Claves | `cell_id` presente en `dim_celdas`; `provincia_id` en `dim_provincias` |
 | Factores | 24 × 12 filas por `tipo`; `0.5 < factor < 20` |
+| Factores de respaldo | 6 × 12 filas por `tipo` (5 regiones + `Argentina`); `0.5 < factor < 20` |
 | Volumen | Diferencia de filas con la versión anterior < 5 % en años cerrados |
 
 ## Fuentes y citas
