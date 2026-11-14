@@ -146,3 +146,17 @@ def test_modelos_tienen_descripciones() -> None:
 
     assert all(c.description for c in Punto.model_fields.values())
     assert all(c.description for c in Anomalia.model_fields.values())
+
+
+@pytest.mark.parametrize(
+    ("acumulado", "confianza"),
+    [
+        (Acumulado(dias=31, estimados=0), "alta"),  # 100 % observado
+        (Acumulado(dias=31, estimados=3, est_modis=2), "alta"),  # frac ≤ 0,1
+        (Acumulado(dias=31, estimados=31, est_modis=50), "baja"),  # estimado
+        (Acumulado(dias=31, estimados=10, est_modis=50), "baja"),  # mixto con frac > 0,1
+    ],
+)
+def test_pocos_datos_no_baja_los_meses_observados(acumulado: Acumulado, confianza: str) -> None:
+    # Decisión del equipo (2026-11-14): "pocos datos" solo afecta a lo estimado.
+    assert acumulado.punto("2023-08", pocos_datos=True).confianza == confianza

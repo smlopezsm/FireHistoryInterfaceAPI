@@ -91,12 +91,12 @@ class Acumulado:
     def punto(self, periodo: str, pocos_datos: bool) -> Punto:
         frac = self.estimados / self.dias
         estado: Estado = "estimado" if frac == 1 else "mixto" if frac else "observado"
+        # docs/04 §5: lo observado (frac ≤ 0,1) es "alta" en cualquier zona; "pocos datos"
+        # solo baja la confianza de lo estimado.
         confianza: Confianza = "baja"
-        if pocos_datos:
-            confianza = "baja"
-        elif frac <= 0.1:
+        if frac <= 0.1:
             confianza = "alta"
-        elif self.est_terra == 0 and self.est_modis >= 21:
+        elif not pocos_datos and self.est_terra == 0 and self.est_modis >= 21:
             confianza = "media"
         return Punto(
             periodo=periodo,

@@ -59,9 +59,11 @@ Sumar los límites provincia por provincia da un rango **conservador** (más anc
 
 | `confianza` | Condición |
 |---|---|
-| `alta` | `frac_estimada ≤ 0,1` |
+| `alta` | `frac_estimada ≤ 0,1` (en cualquier zona, también en provincias con "pocos datos") |
 | `media` | Estimado con MODIS Terra + Aqua y `modis_est ≥ 21` focos en el mes |
-| `baja` | Período solo Terra (antes de 2002-07-04), o `modis_est ≤ 20`, o la zona tiene más del 50 % de su área en provincias marcadas como "pocos datos" (Tierra del Fuego, Santa Cruz, CABA) |
+| `baja` | Período solo Terra (antes de 2002-07-04), o `modis_est ≤ 20`, o la zona tiene más del 50 % de su área en provincias marcadas como "pocos datos" (Tierra del Fuego, Santa Cruz, CABA) y el mes tiene `frac_estimada > 0,1` |
+
+Se evalúa en orden: primero `alta`; "pocos datos" solo baja la confianza de lo **estimado**, porque un mes observado no depende de los factores.
 
 ## 6. Anomalía (mes vs. lo normal)
 

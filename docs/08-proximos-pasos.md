@@ -37,6 +37,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-14**.
 | Recarga con 2 workers | `POST /admin/reload` reabre el worker que lo recibe; cada worker revisa `current` cada 5 s | 01, 03 |
 | Zona por provincia | Celdas de `dim_celdas` con ese `provincia_id` | 03 |
 | Body > 256 KB | 413 `CUERPO_DEMASIADO_GRANDE` | 03 |
+| Confianza en provincias con "pocos datos" | Los meses con `frac_estimada ≤ 0,1` son `alta` en cualquier zona; "pocos datos" solo baja lo estimado | 04 §5 |
 | `satelite_operativo` sin fila para un día | Ese día cuenta como **no operativo** | 04 (código) |
 
 ## 4. Revisión de F3–F7 (correcciones de este PR)
@@ -46,13 +47,10 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-14**.
 - **Swagger:** las 13 operaciones de F3–F7 tenían solo `summary`; ahora tienen descripción, y los campos de respuesta también. `/mapa/*` declara su esquema GeoJSON.
 - **CSV de focos:** `lat`/`lon` se redondean a 5 decimales y `frp_mw` a 2 (antes salía el ruido de los FLOAT de 32 bits).
 - **Documentación:** errores `TOKEN_REQUERIDO` (401) y `TOKEN_INVALIDO` (403) en la tabla de 03.
+- **Confianza:** los meses observados ya no quedan en `baja` por estar en provincias con "pocos datos".
 - **Pruebas nuevas:** confianza (reglas y provincias "pocos datos"), C1 completo (respuestas y OpenAPI) y C7 en todos los endpoints de datos.
 
 ## 5. Pendientes
-
-### Decisión del equipo
-
-- **Confianza en provincias con pocos datos** (Tierra del Fuego `94`, Santa Cruz `78`, CABA `02`): hoy, si la zona tiene más del 50 % de su área en esas provincias, la confianza es `baja` **aunque el mes sea 100 % observado**. [04 §5](04-logica-de-armonizacion.md#5-confianza) no aclara qué pasa con los meses observados. Opciones: dejarlo así o que los meses con `frac_estimada ≤ 0,1` sean siempre `alta`.
 
 ### Fuera de este repo
 
