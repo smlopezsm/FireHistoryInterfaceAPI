@@ -1,0 +1,20 @@
+# Entorno
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Secretos
+.env
+.env.*
+
+# Datos: nunca se suben datos reales ni de demo; solo los fixtures de prueba.
+data/
+*.parquet
+!tests/fixtures/**/*.parquet
+!.env.example
