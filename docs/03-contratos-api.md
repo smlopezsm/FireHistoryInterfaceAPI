@@ -141,6 +141,10 @@ Mismos parámetros de zona y período que `/calendario`, más:
 
 **Respuesta:** `{zona, granularidad, puntos: [...]}`; cada punto tiene los mismos campos que los `meses` de `/calendario` (con `periodo` = `YYYY` si es anual).
 
+Para la granularidad anual se suman los conteos y los límites de los meses incluidos.
+La fracción estimada se calcula sobre todos los días cubiertos por la consulta durante ese año.
+`parcial` se activa si la serie incluye el mes incompleto al final de la cobertura.
+
 ## `GET /anomalia` · `POST /anomalia`
 
 Compara un mes con el **mismo mes de todos los años** de la serie armonizada.
