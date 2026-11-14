@@ -207,8 +207,8 @@ Versión inicial: **488 puntos** (80.681 focos excluidos). La API lo expone como
 | Fechas | `fecha_min ≤ fecha ≤ fecha_max`, sin fechas futuras |
 | Conteos | Todos los `n_*` ≥ 0 y al menos uno > 0 por fila |
 | Claves | `cell_id` presente en `dim_celdas`; `provincia_id` en `dim_provincias` |
-| Factores | 24 × 12 filas por `tipo`; `0.5 < factor < 20` |
-| Factores de respaldo | 6 × 12 filas por `tipo` (5 regiones + `Argentina`); `0.5 < factor < 20` |
+| Factores | 24 × 12 filas por `tipo`; `0.5 < factor < 20` para `modis`; `0.5 < factor < 40` para `terra` (Terra sola ve pocos focos en invierno) |
+| Factores de respaldo | 6 × 12 filas por `tipo` (5 regiones + `Argentina`); `0.5 < factor < 20` para `modis`; `0.5 < factor < 40` para `terra` (Terra sola ve pocos focos en invierno) |
 | Volumen | Diferencia de filas con la versión anterior < 5 % en años cerrados |
 
 ## Fuentes y citas
