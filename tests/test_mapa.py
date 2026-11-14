@@ -69,3 +69,26 @@ def test_mapa_sin_celdas_en_bbox(cliente):
     r = cliente.get("/api/v1/mapa/celdas", params={**PARAMS, "bbox": "0,0,1,1"})
     assert r.status_code == 200, r.text
     assert r.json() == {"type": "FeatureCollection", "features": []}
+
+
+def test_industriales_sin_provincia(tmp_path, hacer_cliente):
+    # Con datos reales hay puntos fuera de los límites provinciales (provincia_id nulo).
+    import shutil
+
+    import pyarrow.parquet as pq
+
+    from app.schemas.mapa import ColeccionIndustriales
+    from tests.conftest import FIXTURES
+
+    destino = tmp_path / "datos"
+    shutil.copytree(FIXTURES, destino)
+    ruta = destino / "puntos_industriales.parquet"
+    tabla = pq.read_table(ruta)
+    filas = tabla.to_pylist()
+    filas[0]["provincia_id"] = None
+    pq.write_table(type(tabla).from_pylist(filas, schema=tabla.schema), ruta)
+
+    r = hacer_cliente(data_dir=destino).get("/api/v1/mapa/industriales")
+    assert r.status_code == 200, r.text
+    coleccion = ColeccionIndustriales.model_validate(r.json())
+    assert [f.properties.provincia_id for f in coleccion.features].count(None) == 1

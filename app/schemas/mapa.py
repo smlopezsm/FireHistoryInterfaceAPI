@@ -44,7 +44,9 @@ class GeometriaPunto(BaseModel):
 class PropiedadesIndustrial(BaseModel):
     motivo: str = Field(description="Por qué se excluye el punto.")
     n_focos: int = Field(description="Focos excluidos en ese punto.")
-    provincia_id: str = Field(description="Provincia.")
+    provincia_id: str | None = Field(
+        description="Provincia; `null` si el punto está fuera de los límites provinciales."
+    )
 
 
 class FeatureIndustrial(BaseModel):

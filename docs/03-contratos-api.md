@@ -196,7 +196,7 @@ y el percentil.
 
 ## `GET /mapa/industriales`
 
-`FeatureCollection` de **puntos**, con las propiedades `motivo`, `n_focos` y `provincia_id`. Tiene `bbox` opcional.
+`FeatureCollection` de **puntos**, con las propiedades `motivo`, `n_focos` y `provincia_id` (`null` si el punto está fuera de las provincias). Tiene `bbox` opcional.
 
 ## `GET|POST /descargas/focos.csv`
 

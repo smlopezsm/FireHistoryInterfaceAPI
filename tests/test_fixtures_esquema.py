@@ -52,7 +52,7 @@ ESPERADO: dict[str, list[tuple[str, str, bool]]] = {
     ],
     "puntos_industriales.parquet": [
         ("punto_id", I64, False), ("lat", F32, False), ("lon", F32, False),
-        ("provincia_id", STR, False), ("motivo", STR, False), ("dias", I16, False),
+        ("provincia_id", STR, True), ("motivo", STR, False), ("dias", I16, False),
         ("anios", I16, False), ("meses", I16, False), ("frac_nocturna", F32, False),
         ("n_focos", I32, False),
     ],

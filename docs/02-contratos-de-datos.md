@@ -168,7 +168,7 @@ Una fila = **día × satélite** desde el inicio de cada misión.
 |---|---|---|
 | `punto_id` | `INT64` | Identificador de la celda de ~1 km (lat × 100, lon × 100 redondeados) |
 | `lat`, `lon` | `FLOAT` | Posición media |
-| `provincia_id` | `VARCHAR(2)` | Provincia |
+| `provincia_id` | `VARCHAR(2)` | Provincia; **`null`** si el punto cae fuera de los límites provinciales (por ejemplo, en la costa o el mar) |
 | `motivo` | `VARCHAR` | `nocturno todo el año` · `marcado industrial por FIRMS` · `nocturno estacional` |
 | `dias`, `anios`, `meses` | `INT16` | Persistencia observada |
 | `frac_nocturna` | `FLOAT` | Proporción de detecciones nocturnas |
@@ -207,8 +207,8 @@ Versión inicial: **488 puntos** (80.681 focos excluidos). La API lo expone como
 | Fechas | `fecha_min ≤ fecha ≤ fecha_max`, sin fechas futuras |
 | Conteos | Todos los `n_*` ≥ 0 y al menos uno > 0 por fila |
 | Claves | `cell_id` presente en `dim_celdas`; `provincia_id` en `dim_provincias` |
-| Factores | 24 × 12 filas por `tipo`; `0.5 < factor < 20` |
-| Factores de respaldo | 6 × 12 filas por `tipo` (5 regiones + `Argentina`); `0.5 < factor < 20` |
+| Factores | 24 × 12 filas por `tipo`; `0.5 < factor < 20` en `modis` y `0.5 < factor < 40` en `terra` (Terra sola ve muy pocos focos en invierno: con datos reales 2012–2019 el factor llega a ~26 en julio) |
+| Factores de respaldo | 6 × 12 filas por `tipo` (5 regiones + `Argentina`); mismos límites que los factores |
 | Volumen | Diferencia de filas con la versión anterior < 5 % en años cerrados |
 
 ## Fuentes y citas
