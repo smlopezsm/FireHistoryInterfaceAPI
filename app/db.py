@@ -13,8 +13,9 @@ from __future__ import annotations
 import json
 import logging
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import duckdb
 from pydantic import ValidationError
@@ -24,6 +25,7 @@ from app.errores import datos_no_disponibles, tiempo_excedido
 from app.schemas.metadata import MetadataArchivo
 
 log = logging.getLogger(__name__)
+T = TypeVar("T")
 
 # vista → (ruta relativa a DATA_DIR, particionado por año)
 ARCHIVOS: dict[str, tuple[str, bool]] = {
@@ -130,6 +132,25 @@ class Datos:
         self, sql: str, parametros: list[Any] | dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """Ejecuta una consulta de lectura y devuelve las filas como diccionarios."""
+
+        def _filas(resultado: duckdb.DuckDBPyConnection) -> list[dict[str, Any]]:
+            columnas = [d[0] for d in resultado.description or []]
+            return [dict(zip(columnas, fila, strict=True)) for fila in resultado.fetchall()]
+
+        return self._ejecutar(sql, parametros, _filas)
+
+    def consultar_columnas(
+        self, sql: str, parametros: list[Any] | dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Ejecuta una consulta y devuelve un arreglo NumPy por columna."""
+        return self._ejecutar(sql, parametros, lambda r: dict(r.fetchnumpy()))
+
+    def _ejecutar(
+        self,
+        sql: str,
+        parametros: list[Any] | dict[str, Any] | None,
+        leer: Callable[[duckdb.DuckDBPyConnection], T],
+    ) -> T:
         con = self._con
         if con is None:
             raise datos_no_disponibles()
@@ -140,9 +161,7 @@ class Datos:
         reloj = threading.Timer(limite, cursor.interrupt)
         try:
             reloj.start()
-            resultado = cursor.execute(sql, parametros)
-            columnas = [d[0] for d in resultado.description or []]
-            return [dict(zip(columnas, fila, strict=True)) for fila in resultado.fetchall()]
+            return leer(cursor.execute(sql, parametros))
         except duckdb.InterruptException as exc:
             raise tiempo_excedido(limite) from exc
         finally:
