@@ -48,3 +48,18 @@ def test_focos_periodo_invalido(cliente):
     r = cliente.get(FOCOS, params={**PARAMS, "desde": "20220801"})
     assert r.status_code == 400, r.text
     assert r.json()["error"]["codigo"] == "PERIODO_INVALIDO"
+
+
+def test_focos_csv_redondea_coordenadas_y_frp(cliente):
+    r = cliente.get(
+        "/api/v1/descargas/focos.csv",
+        params={"provincia_id": "P1", "desde": "2022-08-01", "hasta": "2022-08-31"},
+    )
+    assert r.status_code == 200, r.text
+    filas = list(csv.DictReader(r.text.splitlines()[1:]))
+    assert filas
+    for fila in filas:
+        # Sin ruido de FLOAT de 32 bits: hasta 5 decimales en lat/lon y 2 en FRP.
+        assert len(fila["lat"].split(".")[1]) <= 5
+        assert len(fila["lon"].split(".")[1]) <= 5
+        assert len(fila["frp_mw"].split(".")[1]) <= 2

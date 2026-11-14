@@ -167,7 +167,7 @@ Compara un mes con el **mismo mes de todos los años** de la serie armonizada.
 | `categoria` | enum | `muy_por_debajo` (< p10), `por_debajo` (< p25), `normal`, `por_encima` (> p75), `muy_por_encima` (> p90) |
 | `anios_usados` | integer | Cantidad de años en la comparación |
 
-El histórico excluye el mes evaluado. Los percentiles de corte usan el rango más próximo
+El histórico excluye el mes evaluado y los meses incompletos (el mes en curso). Los percentiles de corte usan el rango más próximo
 hacia arriba en la muestra ordenada. `percentil` indica el porcentaje de valores históricos
 menores o iguales al valor evaluado. Con menos de 10 años o si el mes evaluado está incompleto,
 `categoria` es nula. Si no hay años comparables, también son nulos la mediana, los cuartiles
@@ -196,7 +196,7 @@ y el percentil.
 
 ## `GET /mapa/industriales`
 
-`FeatureCollection` de **puntos**, con las propiedades `motivo`, `n_focos` y `provincia_id`. Tiene `bbox` opcional.
+`FeatureCollection` de **puntos**, con las propiedades `motivo`, `n_focos` y `provincia_id` (`null` si el punto está fuera de las provincias). Tiene `bbox` opcional.
 
 ## `GET|POST /descargas/focos.csv`
 
@@ -237,6 +237,8 @@ Formato único:
 | 400 | `ZONA_INVALIDA` | Falta la zona o hay más de una |
 | 400 | `GEOMETRIA_INVALIDA` | GeoJSON mal formado, autointersecado o con más de 2.000 vértices |
 | 400 | `PERIODO_INVALIDO` | `desde > hasta` o fuera de `[fecha_min, fecha_max]` |
+| 401 | `TOKEN_REQUERIDO` | `POST /admin/reload` sin credencial Bearer |
+| 403 | `TOKEN_INVALIDO` | `POST /admin/reload` con un token incorrecto |
 | 404 | `PROVINCIA_NO_ENCONTRADA` | `provincia_id` inexistente |
 | 413 | `RESULTADO_DEMASIADO_GRANDE` | Se superan los límites de celdas o de filas |
 | 413 | `CUERPO_DEMASIADO_GRANDE` | El body de un `POST` supera los 256 KB |

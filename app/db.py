@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 import duckdb
+import pyarrow as pa
 from pydantic import ValidationError
 
 from app.config import Settings
@@ -123,6 +124,8 @@ class Datos:
                     )
                 self.error = str(exc)
                 return False
+            # La versión anterior no se cierra a mano: puede haber peticiones fijadas a ella
+            # (fijar_version). DuckDB cierra la conexión cuando la última referencia se libera.
             self._actual = version
             self.error = None
             log.info("Datos abiertos: data_version=%s", version.metadata.data_version)
@@ -171,15 +174,21 @@ class Datos:
         return VersionDatos(base, con, metadata, (celdas or (0,))[0], (provincias or (0,))[0])
 
     def consultar(
-        self, sql: str, parametros: list[Any] | dict[str, Any] | None = None
+        self,
+        sql: str,
+        parametros: list[Any] | dict[str, Any] | None = None,
+        celdas: Sequence[int] | None = None,
     ) -> list[dict[str, Any]]:
-        """Ejecuta una consulta de lectura y devuelve las filas como diccionarios."""
+        """Ejecuta una consulta de lectura y devuelve las filas como diccionarios.
+
+        Con ``celdas``, la consulta puede filtrar con ``SELECT cell_id FROM zona_celdas``.
+        """
 
         def _filas(resultado: duckdb.DuckDBPyConnection) -> list[dict[str, Any]]:
             columnas = [d[0] for d in resultado.description or []]
             return [dict(zip(columnas, fila, strict=True)) for fila in resultado.fetchall()]
 
-        return self._ejecutar(sql, parametros, _filas)
+        return self._ejecutar(sql, parametros, _filas, celdas)
 
     def exportar_filas(
         self,
@@ -188,6 +197,7 @@ class Datos:
         parametros: list[Any],
         maximo: int,
         escribir: Callable[[list[tuple[Any, ...]]], object],
+        celdas: Sequence[int] | None = None,
     ) -> None:
         """Cuenta y exporta en lotes con el mismo cursor y presupuesto de consulta."""
 
@@ -212,7 +222,7 @@ class Datos:
                     )
                 escribir(filas)
 
-        self._ejecutar(f"SELECT count(*) {filtro}", parametros, exportar)
+        self._ejecutar(f"SELECT count(*) {filtro}", parametros, exportar, celdas)
 
     def consultar_columnas(
         self, sql: str, parametros: list[Any] | dict[str, Any] | None = None
@@ -225,6 +235,7 @@ class Datos:
         sql: str,
         parametros: list[Any] | dict[str, Any] | None,
         leer: Callable[[duckdb.DuckDBPyConnection], T],
+        celdas: Sequence[int] | None = None,
     ) -> T:
         version = self._version
         if version is None:
@@ -236,6 +247,11 @@ class Datos:
             cursor = version.con.cursor()
             reloj = threading.Timer(limite, cursor.interrupt)
             try:
+                if celdas is not None:
+                    # Las celdas de la zona viajan como tabla Arrow del cursor: pasarlas como
+                    # lista parametrizada (unnest) tarda ~8 s con las 112.000 celdas del país.
+                    tabla = pa.table({"cell_id": pa.array(celdas, type=pa.int32())})
+                    cursor.register("zona_celdas", tabla)
                 reloj.start()
                 return leer(cursor.execute(sql, parametros))
             except duckdb.InterruptException as exc:

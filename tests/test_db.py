@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import time
+from pathlib import Path
+
 import pytest
 from fastapi import FastAPI, Query
 from fastapi.testclient import TestClient
@@ -75,3 +78,28 @@ def test_error_de_validacion_422(cliente: TestClient) -> None:
     error = r.json()["error"]
     assert error["codigo"] == "PARAMETRO_INVALIDO"
     assert error["detalle"][0]["campo"] == "query.n"
+
+
+def test_celdas_de_zona_grande_viajan_como_tabla() -> None:
+    # Argentina tiene ~112.000 celdas: pasarlas como lista parametrizada tardaba ~8 s.
+    datos = Datos(crear_settings())
+    datos.abrir()
+    try:
+        reales = [f["cell_id"] for f in datos.consultar("SELECT cell_id FROM dim_celdas")]
+        celdas = list(range(1, 120_000)) + reales
+        inicio = time.perf_counter()
+        filas = datos.consultar(
+            "SELECT count(*) AS n FROM conteos_celda_dia "
+            "WHERE cell_id IN (SELECT cell_id FROM zona_celdas)",
+            celdas=celdas,
+        )
+        assert time.perf_counter() - inicio < 2
+        total = datos.consultar("SELECT count(*) AS n FROM conteos_celda_dia")
+        assert filas == total
+    finally:
+        datos.cerrar()
+
+
+def test_codigo_no_pasa_listas_de_celdas_como_parametro() -> None:
+    for archivo in Path("app").rglob("*.py"):
+        assert "unnest(?::INTEGER[])" not in archivo.read_text(), archivo

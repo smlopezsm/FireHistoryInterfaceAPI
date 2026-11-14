@@ -21,7 +21,17 @@ def _anomalia(datos: Datos, pedido: PedidoZona, mes: str | None) -> Anomalia:
     return comparar(calcular_meses(datos, zona, PeriodoConsulta()), mes)
 
 
-@router.get("/anomalia", summary="Anomalía mensual respecto del histórico")
+@router.get(
+    "/anomalia",
+    summary="Anomalía mensual respecto del histórico",
+    description=(
+        "Compara un mes con el mismo mes calendario de los demás años completos (mediana, "
+        "cuartiles, percentil y categoría). La categoría es `null` con menos de 10 años o si el "
+        "mes está incompleto. Sin `mes`, evalúa el último mes completo. La zona es **una sola** "
+        "de `provincia_id` o `bbox` (por query); la versión POST acepta además un polígono "
+        "GeoJSON en `geometria`."
+    ),
+)
 def anomalia_get(
     datos: DatosListosDep,
     zona: ZonaQueryDep,
@@ -30,6 +40,13 @@ def anomalia_get(
     return _anomalia(datos, zona, mes)
 
 
-@router.post("/anomalia", summary="Anomalía mensual para una geometría")
+@router.post(
+    "/anomalia",
+    summary="Anomalía mensual para una geometría",
+    description=(
+        "Igual que `GET /anomalia`, con los parámetros en el cuerpo JSON y polígono opcional en "
+        "`geometria`."
+    ),
+)
 def anomalia_post(datos: DatosListosDep, pedido: PedidoAnomalia) -> Anomalia:
     return _anomalia(datos, pedido, pedido.mes)

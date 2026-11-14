@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class ReferenciaViirs(BaseModel):
-    satelite: str = Field(description="Satélite VIIRS de referencia (`SNPP` o `N20`).")
+    satelite: Literal["SNPP", "N20"] = Field(
+        description="Satélite VIIRS de referencia (`SNPP` o `N20`; NOAA-21 nunca lo es)."
+    )
     desde: date = Field(description="Primer día en que es la referencia.")
     hasta: date | None = Field(description="Último día; `null` si sigue vigente.")
 

@@ -125,7 +125,7 @@ PUNTOS_INDUSTRIALES = _esquema(
         ("punto_id", pa.int64()),
         ("lat", pa.float32()),
         ("lon", pa.float32()),
-        ("provincia_id", pa.string()),
+        ("provincia_id", pa.string(), True),
         ("motivo", pa.string()),
         ("dias", pa.int16()),
         ("anios", pa.int16()),
