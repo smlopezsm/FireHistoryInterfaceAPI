@@ -15,6 +15,8 @@ RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin app
 COPY --from=builder /install /usr/local
 WORKDIR /srv
 COPY app ./app
+# Versión de datos publicada (copiada del pipeline). Solo lectura para el usuario app.
+COPY data/current /var/data/current
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

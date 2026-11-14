@@ -56,11 +56,27 @@ jobs:
           tags: firehistory-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Tamaño de la imagen (< 250 MB)
+      - name: Tamaño de la imagen (código < 250 MB; total < 400 MB con los datos)
         run: |
-          bytes=$(docker image inspect firehistory-api:ci --format '{{.Size}}')
-          echo "Tamaño: $((bytes / 1024 / 1024)) MB"
-          test "$bytes" -lt $((250 * 1024 * 1024))
+          total=$(docker image inspect firehistory-api:ci --format '{{.Size}}')
+          datos=$(docker run --rm --entrypoint du firehistory-api:ci -sb /var/data/current | cut -f1)
+          codigo=$((total - datos))
+          echo "Total: $((total / 1024 / 1024)) MB · datos: $((datos / 1024 / 1024)) MB · código: $((codigo / 1024 / 1024)) MB"
+          test "$codigo" -lt $((250 * 1024 * 1024))
+          test "$total" -lt $((400 * 1024 * 1024))
+      - name: Prueba de humo con los datos de la imagen
+        run: |
+          esperado=$(python3 -c "import json; print(json.load(open('data/current/metadata.json'))['data_version'])")
+          docker run --rm -d -p 8001:8000 --name fh-datos \
+            -e CORS_ORIGINS=http://localhost:5173 -e RELOAD_TOKEN=ci firehistory-api:ci
+          for i in $(seq 1 60); do
+            curl -fs localhost:8001/api/v1/health | grep -q '"estado":"ok"' && break
+            sleep 1
+          done
+          curl -fs localhost:8001/api/v1/health | tee /dev/stderr | grep -q "\"data_version\":\"$esperado\""
+          curl -fs -o /dev/null -w "calendario país: %{time_total}s\n" \
+            "localhost:8001/api/v1/calendario?bbox=-74,-56,-53,-21"
+          docker stop fh-datos
       - name: Prueba de humo con los fixtures
         run: |
           docker run --rm -d -p 8000:8000 --name fh-api \

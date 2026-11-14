@@ -1,0 +1,101 @@
+{
+  "hacia_atras": {
+    "error_pct": 15.485874969033517,
+    "sesgo_pct": 0.01152429320974413,
+    "n_meses": 840,
+    "error_modis_crudo_pct": 69.74450170113698,
+    "calibracion": [
+      2015,
+      2022
+    ],
+    "prueba": [
+      2012,
+      2014
+    ]
+  },
+  "hacia_adelante": {
+    "error_pct": 16.518640758943167,
+    "sesgo_pct": -4.8913865284028155,
+    "n_meses": 1728,
+    "error_modis_crudo_pct": 70.73536318730261,
+    "calibracion": [
+      2012,
+      2019
+    ],
+    "prueba": [
+      2020,
+      2025
+    ]
+  },
+  "cobertura_rangos_pct": 83.10878243512974,
+  "factor_nacional": {
+    "modis": 3.3296958152399094,
+    "terra": 9.081052808684648
+  },
+  "rangos": [
+    {
+      "modis_min": 0,
+      "modis_max": 0,
+      "mult_bajo": 0.0,
+      "mult_alto": 9.0,
+      "n_meses": 429
+    },
+    {
+      "modis_min": 1,
+      "modis_max": 5,
+      "mult_bajo": 0.47143056988716125,
+      "mult_alto": 4.436801433563232,
+      "n_meses": 461
+    },
+    {
+      "modis_min": 6,
+      "modis_max": 20,
+      "mult_bajo": 0.5304268598556519,
+      "mult_alto": 1.8741117715835571,
+      "n_meses": 691
+    },
+    {
+      "modis_min": 21,
+      "modis_max": 100,
+      "mult_bajo": 0.6166423559188843,
+      "mult_alto": 1.344511866569519,
+      "n_meses": 1155
+    },
+    {
+      "modis_min": 101,
+      "modis_max": 500,
+      "mult_bajo": 0.7350963950157166,
+      "mult_alto": 1.240250587463379,
+      "n_meses": 890
+    },
+    {
+      "modis_min": 501,
+      "modis_max": 2147483647,
+      "mult_bajo": 0.8313586115837097,
+      "mult_alto": 1.174612283706665,
+      "n_meses": 382
+    }
+  ],
+  "puntos_industriales": {
+    "n_puntos": 478,
+    "focos_excluidos": 73897
+  },
+  "recorte_misiones": {
+    "Terra": 24,
+    "Aqua": 0,
+    "SNPP": 0,
+    "N20": 0,
+    "N21": 0
+  },
+  "filas": {
+    "focos": 6201450,
+    "conteos_celda_dia": 1890033,
+    "dim_celdas": 112711
+  },
+  "volumen": {
+    "tolerancia_pct": 5.0,
+    "max_diferencia_pct": 0.0,
+    "anios_comparados": 52,
+    "version_anterior": "20261114T173321"
+  }
+}
