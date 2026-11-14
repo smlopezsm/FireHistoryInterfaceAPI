@@ -78,7 +78,8 @@ El sistema tiene **tres piezas**, cada una en su propio repositorio:
    4. Valida (esquemas, conteos > 0, fechas) → genera metadata.json con data_version
    5. Sube el paquete al VPS (rsync por SSH) en /var/data/releases/<data_version>/
    6. Cambia el symlink /var/data/current → nueva versión (cambio atómico)
-   7. Llama POST /api/v1/admin/reload (token) → la API reabre DuckDB
+   7. Llama POST /api/v1/admin/reload (token) → el worker que lo recibe reabre DuckDB;
+      el otro detecta el cambio del symlink en pocos segundos
 ```
 
 - **El histórico (2000 → último SP)** se regenera solo cuando cambian los factores o la lista de puntos industriales (acción manual).

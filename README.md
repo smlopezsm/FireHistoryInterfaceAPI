@@ -34,6 +34,7 @@ Sirve conteos de focos **armonizados a escala VIIRS** por región y período, pa
 | [docs/05-despliegue.md](docs/05-despliegue.md) | Dockerfile, variables de entorno, Dokploy, CI/CD |
 | [docs/06-pruebas-y-aceptacion.md](docs/06-pruebas-y-aceptacion.md) | Plan de pruebas y criterios de aceptación |
 | [docs/07-spec-kit.md](docs/07-spec-kit.md) | Cómo trabajamos con GitHub Spec Kit (SDD) y los textos iniciales |
+| [docs/08-proximos-pasos.md](docs/08-proximos-pasos.md) | **Estado actual, decisiones tomadas y plan de F3–F7** (para retomar el trabajo) |
 
 ## Estructura prevista del repositorio
 
