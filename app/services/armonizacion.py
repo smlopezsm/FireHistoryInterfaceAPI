@@ -16,7 +16,7 @@ from app.services.zonas import ZonaResuelta
 POCOS_DATOS = {"94", "78", "02"}
 
 # Los días operativos se cuentan independientemente de las filas de focos.
-AGREGAR = """
+COBERTURA_SQL = """
 WITH dias AS (
     SELECT CAST(dia AS DATE) AS fecha,
            CASE WHEN dia BETWEEN DATE '2012-01-20' AND DATE '2026-11-02' THEN 'SNPP'
@@ -26,12 +26,10 @@ WITH dias AS (
     SELECT d.fecha, d.referencia, coalesce(s.operativo, false) AS operativo
     FROM dias d LEFT JOIN satelite_operativo s
         ON s.fecha = d.fecha AND s.satelite = d.referencia
-), meses AS (
-    SELECT date_trunc('month', fecha)::DATE AS mes, count(*) AS dias,
-           count(*) FILTER (WHERE NOT operativo) AS estimados
-    FROM cobertura GROUP BY 1
-), focos_mes AS (
-    SELECT date_trunc('month', c.fecha)::DATE AS mes, c.provincia_id,
+)
+"""
+
+CONTEOS_SQL = """
            sum(c.n_terra + c.n_aqua) AS modis,
            sum(CASE WHEN d.operativo AND d.referencia = 'SNPP' THEN c.n_snpp
                     WHEN d.operativo AND d.referencia = 'N20' THEN c.n_n20
@@ -40,6 +38,16 @@ WITH dias AS (
                     THEN c.n_terra ELSE 0 END) AS est_terra,
            sum(CASE WHEN NOT d.operativo AND c.fecha >= DATE '2002-07-04'
                     THEN c.n_terra + c.n_aqua ELSE 0 END) AS est_modis
+"""
+
+AGREGAR = f"""
+{COBERTURA_SQL}, meses AS (
+    SELECT date_trunc('month', fecha)::DATE AS mes, count(*) AS dias,
+           count(*) FILTER (WHERE NOT operativo) AS estimados
+    FROM cobertura GROUP BY 1
+), focos_mes AS (
+    SELECT date_trunc('month', c.fecha)::DATE AS mes, c.provincia_id,
+           {CONTEOS_SQL}
     FROM conteos_celda_dia c JOIN cobertura d ON c.fecha = d.fecha
     WHERE c.anio BETWEEN ? AND ?
       AND c.fecha BETWEEN ? AND ?
