@@ -13,8 +13,11 @@ dist/
 .env
 .env.*
 
-# Datos: nunca se suben datos reales ni de demo; solo los fixtures de prueba.
-data/
+# Datos: solo se versionan los fixtures de prueba y la versión publicada en data/current
+# (va dentro de la imagen Docker). data/demo y cualquier otra carpeta de datos quedan afuera.
+data/*
+!data/current/
 *.parquet
 !tests/fixtures/**/*.parquet
+!data/current/**/*.parquet
 !.env.example

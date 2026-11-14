@@ -38,6 +38,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-14**.
 | Zona por provincia | Celdas de `dim_celdas` con ese `provincia_id` | 03 |
 | Body > 256 KB | 413 `CUERPO_DEMASIADO_GRANDE` | 03 |
 | Confianza en provincias con "pocos datos" | Los meses con `frac_estimada ≤ 0,1` son `alta` en cualquier zona; "pocos datos" solo baja lo estimado | 04 §5 |
+| Datos de producción | Versión del pipeline copiada en `data/current/` y empaquetada en la imagen (sin volumen en el VPS) | 05 |
 | `satelite_operativo` sin fila para un día | Ese día cuenta como **no operativo** | 04 (código) |
 
 ## 4. Revisión de F3–F7 (correcciones de este PR)

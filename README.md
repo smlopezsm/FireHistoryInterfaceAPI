@@ -74,7 +74,7 @@ uv pip install -e ".[dev]"           # o: .venv/bin/pip install -e ".[dev]"
 | Datos | Cómo se obtienen | Carpeta |
 |---|---|---|
 | **Demo** (sintéticos) | `.venv/bin/python scripts/make_demo_data.py` | `data/demo/` (no se sube al repo) |
-| **Reales** | Paquete publicado por el pipeline [`ml_nasaspaceapp`](https://github.com/DenisPablo/ml_nasaspaceapp) con el formato de [docs/02](docs/02-contratos-de-datos.md) | Por ejemplo `data/real/` |
+| **Reales** | Versión publicada por el pipeline [`ML_NasaSpaceApp`](https://github.com/DenisPablo/ML_NasaSpaceApp) con el formato de [docs/02](docs/02-contratos-de-datos.md) | `data/current/` (en el repo y dentro de la imagen) |
 | **Fixtures** de prueba | `.venv/bin/python scripts/make_fixtures.py` (ya están en el repo) | `tests/fixtures/` |
 
 ### 3. Levantar la API
@@ -94,7 +94,7 @@ docker run --rm -p 8000:8000 -v "$PWD/data/demo:/var/data/current:ro" \
   -e CORS_ORIGINS=http://localhost:5173 -e RELOAD_TOKEN=dev firehistory-api:dev
 ```
 
-Para usar datos reales, montá su carpeta en lugar de `data/demo`.
+La imagen ya trae los datos reales de `data/current/`: sin el `-v` usa esos. El `-v` de arriba los reemplaza por los de demo.
 
 - Salud: <http://localhost:8000/api/v1/health>
 - Swagger: <http://localhost:8000/docs>
@@ -110,13 +110,13 @@ Para usar datos reales, montá su carpeta en lugar de `data/demo`.
 Si faltan los datos, la API levanta igual: `/health` responde `estado: degradado` y los
 endpoints de datos devuelven `503 DATOS_NO_DISPONIBLES`.
 
-## Actualizar el paquete de datos
+## Datos de producción
 
-En producción, cada worker verifica cada cinco segundos si el enlace `current` apunta a
-otra versión. El pipeline también puede solicitar una recarga inmediata al worker que
-recibe `POST /api/v1/admin/reload` con `Authorization: Bearer <RELOAD_TOKEN>`.
-Mantené disponible la carpeta anterior mientras terminan las consultas iniciadas sobre ella.
-Ver [despliegue](docs/05-despliegue.md).
+La versión publicada por el pipeline está en **`data/current/`** y **se copia dentro de la imagen Docker** (no hace falta montar nada en el VPS).
+
+Para actualizarla: reemplazá `data/current/` por la carpeta `serving_api/<versión>/` de [`ML_NasaSpaceApp`](https://github.com/DenisPablo/ML_NasaSpaceApp) y abrí un PR. Al mergear, el CI publica la imagen y Dokploy la despliega. Ver [despliegue](docs/05-despliegue.md#5-bis-actualizar-los-datos).
+
+Para levantar la API local con esos datos: `DATA_DIR=data/current CORS_ORIGINS=http://localhost:5173 RELOAD_TOKEN=dev .venv/bin/uvicorn app.main:app`.
 
 ## Licencia y datos
 
