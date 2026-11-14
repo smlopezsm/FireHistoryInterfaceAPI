@@ -48,6 +48,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-14**.
 - **CSV de focos:** `lat`/`lon` se redondean a 5 decimales y `frp_mw` a 2 (antes salía el ruido de los FLOAT de 32 bits).
 - **Documentación:** errores `TOKEN_REQUERIDO` (401) y `TOKEN_INVALIDO` (403) en la tabla de 03.
 - **Confianza:** los meses observados ya no quedan en `baja` por estar en provincias con "pocos datos".
+- **Rendimiento:** las celdas de la zona viajan a DuckDB como tabla Arrow registrada en el cursor (`zona_celdas`) y no como lista parametrizada. Con los datos reales del pipeline (versión `20261114T171326`, medido en una Mac): calendario de Argentina de 8,0 s a 0,3 s; de una provincia, de 285 a 97 ms; `focos.csv` de un año, de 540 a 76 ms.
 - **Pruebas nuevas:** confianza (reglas y provincias "pocos datos"), C1 completo (respuestas y OpenAPI) y C7 en todos los endpoints de datos.
 
 ## 5. Pendientes

@@ -62,7 +62,7 @@ AGREGAR = """, meses AS (
     FROM conteos_celda_dia c JOIN cobertura d ON c.fecha = d.fecha
     WHERE c.anio BETWEEN ? AND ?
       AND c.fecha BETWEEN ? AND ?
-      AND c.cell_id IN (SELECT unnest(?::INTEGER[]))
+      AND c.cell_id IN (SELECT cell_id FROM zona_celdas)
     GROUP BY 1, 2
 )
 SELECT m.*, p.provincia_id, p.region, coalesce(f.modis, 0) AS modis,
@@ -208,7 +208,8 @@ def calcular_meses(
     inicio, fin = _limites(consulta, metadata.fecha_min, metadata.fecha_max)
     filas = datos.consultar(
         cobertura_sql(metadata.referencia_viirs) + AGREGAR.format(conteos=CONTEOS_SQL),
-        [inicio, fin, inicio.year, fin.year, inicio, fin, zona.celdas_ids, list(zona.provincias)],
+        [inicio, fin, inicio.year, fin.year, inicio, fin, list(zona.provincias)],
+        celdas=zona.celdas_ids,
     )
     factores = Factores(datos)
     rangos = datos.consultar("SELECT * FROM rangos")

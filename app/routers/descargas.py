@@ -103,10 +103,10 @@ def _focos(
 
     filtro = """
         FROM focos WHERE anio BETWEEN ? AND ? AND fecha BETWEEN ? AND ?
-        AND cell_id IN (SELECT unnest(?::INTEGER[]))
+        AND cell_id IN (SELECT cell_id FROM zona_celdas)
         AND (? = 'todos' OR sensor = ?)
     """
-    parametros = [inicio.year, fin.year, inicio, fin, zona.celdas_ids, sensor, sensor]
+    parametros = [inicio.year, fin.year, inicio, fin, sensor, sensor]
     archivo = TemporaryFile(  # noqa: SIM115 - la respuesta adquiere el archivo
         mode="w+t", encoding="utf-8", newline=""
     )
@@ -114,7 +114,9 @@ def _focos(
         archivo.write("# Fuente: NASA FIRMS (MODIS C6.1 y VIIRS 375 m)\r\n")
         escritor = csv.writer(archivo)
         escritor.writerow(FOCOS)
-        datos.exportar_filas(filtro, COLUMNAS_SQL, parametros, maximo, escritor.writerows)
+        datos.exportar_filas(
+            filtro, COLUMNAS_SQL, parametros, maximo, escritor.writerows, celdas=zona.celdas_ids
+        )
         return _respuesta(archivo, f"focos_{_nombre(zona)}_{desde}_{hasta}")
     except BaseException:
         archivo.close()
