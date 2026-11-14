@@ -37,10 +37,12 @@ ENTRADA: zona (→ conjunto de celdas C), período [desde, hasta], capa
      armonizado_m = Σ_p (observado_pm + estimado_pm)
      minimo_m     = Σ_p (observado_pm + min_pm)
      maximo_m     = Σ_p (observado_pm + max_pm)
-     frac_estimada_m = días estimados / días del mes
+     frac_estimada_m = días estimados / días del mes con datos   (en el mes en curso, hasta fecha_max)
      estado_m     = observado | estimado | mixto
 6. Capa "modis": devolver Σ (n_terra + n_aqua). Capa "viirs": Σ n_ref o null si no había referencia.
 ```
+
+**Meses que combinan factores** (por ejemplo julio de 2002, con días solo Terra y días Terra + Aqua): se suman por separado los focos MODIS de cada tipo y se aplica a cada suma su factor (`terra` o `modis`). El tramo del rango (§4) se elige con el total de `modis_est_pm`.
 
 **Importante:** el factor se aplica a los **totales mensuales por provincia**, no a cada día suelto. Así se calibraron los factores y así el rango tiene sentido.
 
@@ -72,7 +74,7 @@ Sumar los límites provincia por provincia da un rango **conservador** (más anc
 |---|---|
 | Zona sin ninguna celda | 400 `ZONA_INVALIDA` ("La zona no contiene celdas de Argentina") |
 | Zona que cruza provincias | Se calcula por provincia y se suma (§3) |
-| Mes en curso (incompleto) | Se devuelve con `parcial: true` y sin categoría de anomalía |
+| Mes en curso (incompleto) | Se devuelve con `parcial: true` y sin categoría de anomalía; `frac_estimada` se calcula sobre los días transcurridos hasta `fecha_max` |
 | Factor faltante (provincia, mes) | Se usa el de la región de `factores_region_mes.parquet`; si falta, el nacional (`region = Argentina`). `nivel_origen` informa cuál |
 | Días antes de 2000-11-01 | No hay datos: los meses no se devuelven |
 | Diferencia entre SP y NRT | Transparente: la columna `fuente` existe en `focos/`, pero los conteos los unifican |

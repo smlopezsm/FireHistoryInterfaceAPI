@@ -10,7 +10,7 @@
 | Zona de consulta | **Una sola** de: `provincia_id`, `bbox` o un polígono GeoJSON (solo en `POST`) |
 | `bbox` | `oeste,sur,este,norte` en EPSG:4326, por ejemplo `-67.4,-36.0,-64.9,-31.8` |
 | Polígono | GeoJSON `Polygon` o `MultiPolygon` en EPSG:4326, hasta 2.000 vértices |
-| Celdas de una zona | Entran las celdas cuyo **centroide** cae dentro de la zona |
+| Celdas de una zona | Con `bbox` o polígono, entran las celdas cuyo **centroide** cae dentro de la zona. Con `provincia_id`, las celdas que `dim_celdas` asigna a esa provincia (mayor fracción de área), igual que en `conteos_celda_dia` |
 | Números | Conteos como enteros; armonizados con 1 decimal |
 | Nulos | `null` significa "**no hay dato**" (por ejemplo VIIRS antes de 2012), **nunca** cero |
 | Caché | `Cache-Control: public, max-age=3600` y `ETag = data_version` |
@@ -85,7 +85,7 @@ Matriz **mes × año** para la zona elegida. Es el endpoint central.
 | `geometria` | GeoJSON | Uno de los tres (solo POST) | — | Polígono dibujado por el usuario |
 | `desde` | `YYYY-MM` | No | `2000-11` | Primer mes |
 | `hasta` | `YYYY-MM` | No | último mes con datos | Último mes |
-| `capa` | enum | No | `armonizado` | `armonizado`, `modis`, `viirs` |
+| `capa` | enum | No | `armonizado` | `armonizado`, `modis`, `viirs`. Cada mes trae **siempre** todos los campos; la capa solo cambia `unidad` y el cálculo de `resumen` (en `viirs`, los meses con `viirs = null` no cuentan) |
 
 **Respuesta 200**
 
@@ -209,7 +209,7 @@ Compara un mes con el **mismo mes de todos los años** de la serie armonizada.
 ## `POST /admin/reload`
 
 - **Cabecera:** `Authorization: Bearer <RELOAD_TOKEN>`.
-- **Qué hace:** reabre las conexiones DuckDB sobre `/var/data/current`.
+- **Qué hace:** reabre la conexión DuckDB **del worker que recibe la llamada** sobre `/var/data/current`. Como Uvicorn corre con 2 workers, además cada worker revisa cada pocos segundos a qué versión apunta el symlink `current` y, si cambió, reabre su conexión por su cuenta. Las consultas en curso terminan sobre la versión anterior.
 - **Respuestas:** `204`, o `401` / `403` si el token no es válido.
 
 ---
@@ -229,7 +229,8 @@ Formato único:
 | 400 | `PERIODO_INVALIDO` | `desde > hasta` o fuera de `[fecha_min, fecha_max]` |
 | 404 | `PROVINCIA_NO_ENCONTRADA` | `provincia_id` inexistente |
 | 413 | `RESULTADO_DEMASIADO_GRANDE` | Se superan los límites de celdas o de filas |
-| 422 | `PARAMETRO_INVALIDO` | Error de validación (FastAPI) |
+| 413 | `CUERPO_DEMASIADO_GRANDE` | El body de un `POST` supera los 256 KB |
+| 422 | `PARAMETRO_INVALIDO` | Error de validación (FastAPI), incluido un `bbox` mal formado |
 | 503 | `DATOS_NO_DISPONIBLES` | Datos recargándose o ausentes |
 | 504 | `TIEMPO_EXCEDIDO` | Consulta de más de 10 s |
 
