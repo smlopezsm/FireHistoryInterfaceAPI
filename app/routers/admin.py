@@ -16,6 +16,12 @@ router = APIRouter(prefix="/admin", tags=["administracion"])
     "/reload",
     status_code=204,
     summary="Recargar los datos del worker",
+    description=(
+        "Reabre DuckDB sobre `/var/data/current` en el worker que recibe la llamada (el otro "
+        "detecta el cambio del enlace `current` en pocos segundos). Requiere `Authorization: "
+        "Bearer <RELOAD_TOKEN>`. Si el paquete nuevo no abre, se conserva la versión anterior y "
+        "responde 503."
+    ),
     responses={401: {"description": "Falta el token"}, 403: {"description": "Token inválido"}},
 )
 def recargar(

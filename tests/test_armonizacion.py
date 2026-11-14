@@ -1,6 +1,11 @@
 """Casos de armonización del traspaso F3."""
 
+import json
+import shutil
+
 import pytest
+
+from tests.conftest import FIXTURES
 
 
 @pytest.mark.parametrize(
@@ -100,3 +105,33 @@ def test_zona_de_dos_provincias(cliente):
     )
     assert r.status_code == 200, r.text
     assert r.json()["meses"][0]["armonizado"] == 35
+
+
+def test_referencia_viirs_sale_de_metadata(tmp_path, hacer_cliente):
+    # Si el pipeline adelanta el cambio a NOAA-20, la API lo sigue sin tocar código.
+    destino = tmp_path / "datos"
+    shutil.copytree(FIXTURES, destino)
+    meta = json.loads((destino / "metadata.json").read_text())
+    meta["referencia_viirs"] = [
+        {"satelite": "SNPP", "desde": "2012-01-20", "hasta": "2022-07-31"},
+        {"satelite": "N20", "desde": "2022-08-01", "hasta": None},
+    ]
+    (destino / "metadata.json").write_text(json.dumps(meta))
+    cliente = hacer_cliente(data_dir=destino)
+    r = cliente.get(
+        "/api/v1/calendario", params={"provincia_id": "P1", "desde": "2022-08", "hasta": "2022-08"}
+    )
+    assert r.status_code == 200, r.text
+    (mes,) = r.json()["meses"]
+    # Con N20 de referencia, agosto es 100 % observado: solo el N20 del día 11 (9 focos).
+    assert (mes["armonizado"], mes["viirs"], mes["estado"]) == (9, 9, "observado")
+
+
+def test_referencia_viirs_invalida_deja_degradado(tmp_path, hacer_cliente):
+    destino = tmp_path / "datos"
+    shutil.copytree(FIXTURES, destino)
+    meta = json.loads((destino / "metadata.json").read_text())
+    meta["referencia_viirs"][1]["satelite"] = "N21"  # NOAA-21 nunca es referencia
+    (destino / "metadata.json").write_text(json.dumps(meta))
+    cliente = hacer_cliente(data_dir=destino)
+    assert cliente.get("/api/v1/health").json()["estado"] == "degradado"

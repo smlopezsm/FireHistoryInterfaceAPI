@@ -8,11 +8,11 @@ import orjson
 from app.db import Datos
 from app.errores import ApiError, datos_no_disponibles
 from app.schemas.armonizacion import Capa
-from app.services.armonizacion import COBERTURA_SQL, CONTEOS_SQL
+from app.services.armonizacion import CONTEOS_SQL, cobertura_sql
 from app.services.zonas import parsear_bbox
 
 CELDAS_SQL = f"""
-{COBERTURA_SQL}, zona AS (
+, zona AS (
     SELECT cell_id, provincia_id FROM dim_celdas
     WHERE lon_centro BETWEEN ? AND ? AND lat_centro BETWEEN ? AND ?
 ), meses AS (
@@ -90,8 +90,9 @@ def celdas(
 ) -> dict[str, Any]:
     oeste, sur, este, norte = parsear_bbox(bbox)
     inicio, fin = _periodo(datos, desde, hasta)
+    assert datos.metadata is not None
     filas = datos.consultar(
-        CELDAS_SQL,
+        cobertura_sql(datos.metadata.referencia_viirs) + CELDAS_SQL,
         [
             inicio,
             fin,

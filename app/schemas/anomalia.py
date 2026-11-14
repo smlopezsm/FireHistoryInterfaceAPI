@@ -14,12 +14,16 @@ class PedidoAnomalia(PedidoZona):
 
 
 class Anomalia(BaseModel):
-    mes: str
-    valor: float
-    mediana: float | None
-    p25: float | None
-    p75: float | None
-    razon: float | None
-    percentil: float | None
-    categoria: Categoria | None
-    anios_usados: int
+    mes: str = Field(description="Mes evaluado (`YYYY-MM`).")
+    valor: float = Field(description="Focos armonizados del mes.")
+    mediana: float | None = Field(description="Mediana del mismo mes en los demás años completos.")
+    p25: float | None = Field(description="Cuartil inferior histórico.")
+    p75: float | None = Field(description="Cuartil superior histórico.")
+    razon: float | None = Field(description="`valor / mediana`; `null` si la mediana es 0.")
+    percentil: float | None = Field(
+        description="Porcentaje de años con un valor menor o igual (0–100)."
+    )
+    categoria: Categoria | None = Field(
+        description="Categoría; `null` con menos de 10 años o si el mes está incompleto."
+    )
+    anios_usados: int = Field(description="Cantidad de años en la comparación.")

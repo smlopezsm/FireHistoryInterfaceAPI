@@ -123,6 +123,8 @@ class Datos:
                     )
                 self.error = str(exc)
                 return False
+            # La versión anterior no se cierra a mano: puede haber peticiones fijadas a ella
+            # (fijar_version). DuckDB cierra la conexión cuando la última referencia se libera.
             self._actual = version
             self.error = None
             log.info("Datos abiertos: data_version=%s", version.metadata.data_version)

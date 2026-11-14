@@ -59,3 +59,19 @@ def test_categorias_con_historial_suficiente(valor: float, categoria: str) -> No
     assert resultado.categoria == categoria
     assert resultado.mediana == 6.5
     assert (resultado.p25, resultado.p75) == (3, 9)
+
+
+def test_muestra_excluye_meses_parciales(cliente: TestClient) -> None:
+    # 2026-11 está incompleto (datos hasta el 13): no puede entrar en el histórico de noviembre.
+    r = cliente.get("/api/v1/anomalia", params={"provincia_id": "P1", "mes": "2025-11"})
+    assert r.status_code == 200, r.text
+    # Noviembres completos: 2000 a 2025 (26) menos el evaluado = 25.
+    assert r.json()["anios_usados"] == 25
+
+
+def test_muestra_excluye_parciales_unitario() -> None:
+    meses = {f"{2010 + i}-11": Acumulado(armonizado=5) for i in range(12)}
+    meses["2022-11"] = Acumulado(armonizado=1000, parcial=True)
+    resultado = comparar(meses, "2021-11")
+    assert resultado.anios_usados == 11
+    assert resultado.mediana == 5

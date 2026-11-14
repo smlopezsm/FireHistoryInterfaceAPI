@@ -36,7 +36,7 @@ def comparar(meses: dict[str, Acumulado], mes: str | None) -> Anomalia:
     muestra = sorted(
         round(datos.armonizado, 1)
         for periodo, datos in meses.items()
-        if periodo != mes and periodo[5:] == mes[5:]
+        if periodo != mes and periodo[5:] == mes[5:] and not datos.parcial
     )
     n = len(muestra)
     central = median(muestra) if n else None

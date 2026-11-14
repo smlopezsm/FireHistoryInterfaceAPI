@@ -11,16 +11,27 @@ from typing import Any
 from app.db import Datos
 from app.errores import ApiError, datos_no_disponibles
 from app.schemas.armonizacion import Capa, Confianza, Estado, PeriodoConsulta, Punto, Resumen
+from app.schemas.metadata import ReferenciaViirs
 from app.services.zonas import ZonaResuelta
 
 POCOS_DATOS = {"94", "78", "02"}
 
-# Los días operativos se cuentan independientemente de las filas de focos.
-COBERTURA_SQL = """
+
+def cobertura_sql(referencias: list[ReferenciaViirs]) -> str:
+    """CTE con la referencia VIIRS de cada día (de `metadata.referencia_viirs`) y si operó.
+
+    Los días operativos se cuentan independientemente de las filas de focos. Los valores
+    vienen de un modelo validado (satélite `SNPP` o `N20` y fechas), así que es seguro
+    escribirlos en el SQL.
+    """
+    casos = []
+    for ref in referencias:
+        hasta = f" AND dia <= DATE '{ref.hasta.isoformat()}'" if ref.hasta else ""
+        casos.append(f"WHEN dia >= DATE '{ref.desde.isoformat()}'{hasta} THEN '{ref.satelite}'")
+    referencia = f"CASE {' '.join(casos)} END" if casos else "NULL"
+    return f"""
 WITH dias AS (
-    SELECT CAST(dia AS DATE) AS fecha,
-           CASE WHEN dia BETWEEN DATE '2012-01-20' AND DATE '2026-11-02' THEN 'SNPP'
-                WHEN dia >= DATE '2026-11-03' THEN 'N20' END AS referencia
+    SELECT CAST(dia AS DATE) AS fecha, {referencia} AS referencia
     FROM generate_series(?::DATE, ?::DATE, INTERVAL 1 DAY) AS fechas(dia)
 ), cobertura AS (
     SELECT d.fecha, d.referencia, coalesce(s.operativo, false) AS operativo
@@ -28,6 +39,7 @@ WITH dias AS (
         ON s.fecha = d.fecha AND s.satelite = d.referencia
 )
 """
+
 
 CONTEOS_SQL = """
            sum(c.n_terra + c.n_aqua) AS modis,
@@ -40,14 +52,13 @@ CONTEOS_SQL = """
                     THEN c.n_terra + c.n_aqua ELSE 0 END) AS est_modis
 """
 
-AGREGAR = f"""
-{COBERTURA_SQL}, meses AS (
+AGREGAR = """, meses AS (
     SELECT date_trunc('month', fecha)::DATE AS mes, count(*) AS dias,
            count(*) FILTER (WHERE NOT operativo) AS estimados
     FROM cobertura GROUP BY 1
 ), focos_mes AS (
     SELECT date_trunc('month', c.fecha)::DATE AS mes, c.provincia_id,
-           {CONTEOS_SQL}
+           {conteos}
     FROM conteos_celda_dia c JOIN cobertura d ON c.fecha = d.fecha
     WHERE c.anio BETWEEN ? AND ?
       AND c.fecha BETWEEN ? AND ?
@@ -196,7 +207,7 @@ def calcular_meses(
         raise datos_no_disponibles()
     inicio, fin = _limites(consulta, metadata.fecha_min, metadata.fecha_max)
     filas = datos.consultar(
-        AGREGAR,
+        cobertura_sql(metadata.referencia_viirs) + AGREGAR.format(conteos=CONTEOS_SQL),
         [inicio, fin, inicio.year, fin.year, inicio, fin, zona.celdas_ids, list(zona.provincias)],
     )
     factores = Factores(datos)

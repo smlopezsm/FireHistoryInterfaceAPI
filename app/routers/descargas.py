@@ -35,6 +35,11 @@ FOCOS = (
     "provincia_id",
     "cell_id",
 )
+# lat, lon y frp_mw son FLOAT de 32 bits: se redondean para no exportar ruido de precisión.
+REDONDEO = {"lat": 5, "lon": 5, "frp_mw": 2}
+COLUMNAS_SQL = ", ".join(
+    f"round({c}::DOUBLE, {REDONDEO[c]}) AS {c}" if c in REDONDEO else c for c in FOCOS
+)
 CALENDARIO = (
     "periodo",
     "modis",
@@ -109,7 +114,7 @@ def _focos(
         archivo.write("# Fuente: NASA FIRMS (MODIS C6.1 y VIIRS 375 m)\r\n")
         escritor = csv.writer(archivo)
         escritor.writerow(FOCOS)
-        datos.exportar_filas(filtro, ", ".join(FOCOS), parametros, maximo, escritor.writerows)
+        datos.exportar_filas(filtro, COLUMNAS_SQL, parametros, maximo, escritor.writerows)
         return _respuesta(archivo, f"focos_{_nombre(zona)}_{desde}_{hasta}")
     except BaseException:
         archivo.close()
@@ -135,7 +140,15 @@ def _calendario(datos: Datos, pedido: PedidoZona, consulta: PeriodoConsulta) -> 
 
 
 @router.get(
-    "/focos.csv", summary="Descargar focos individuales en CSV", response_class=StreamingResponse
+    "/focos.csv",
+    summary="Descargar focos individuales en CSV",
+    description=(
+        "Focos individuales de la zona y el período en CSV (UTF-8), filtrables por sensor. La "
+        "primera línea es un comentario con la cita a NASA FIRMS. Máximo 500.000 filas; si se "
+        "supera, responde 413. La zona es **una sola** de `provincia_id` o `bbox` (por query); la"
+        " versión POST acepta además un polígono GeoJSON en `geometria`."
+    ),
+    response_class=StreamingResponse,
 )
 def focos_get(
     request: Request,
@@ -149,7 +162,13 @@ def focos_get(
 
 
 @router.post(
-    "/focos.csv", summary="Descargar focos por geometría en CSV", response_class=StreamingResponse
+    "/focos.csv",
+    summary="Descargar focos por geometría en CSV",
+    description=(
+        "Igual que `GET /descargas/focos.csv`, con los parámetros en el cuerpo JSON y polígono "
+        "opcional en `geometria`."
+    ),
+    response_class=StreamingResponse,
 )
 def focos_post(request: Request, datos: DatosListosDep, pedido: PedidoFocos) -> StreamingResponse:
     return _focos(
@@ -163,7 +182,14 @@ def focos_post(request: Request, datos: DatosListosDep, pedido: PedidoFocos) -> 
 
 
 @router.get(
-    "/calendario.csv", summary="Descargar el calendario en CSV", response_class=StreamingResponse
+    "/calendario.csv",
+    summary="Descargar el calendario en CSV",
+    description=(
+        "El calendario mensual de la zona en CSV, con las mismas columnas que los meses de "
+        "`/calendario` (salvo `parcial`). La zona es **una sola** de `provincia_id` o `bbox` (por"
+        " query); la versión POST acepta además un polígono GeoJSON en `geometria`."
+    ),
+    response_class=StreamingResponse,
 )
 def calendario_get(
     datos: DatosListosDep,
@@ -176,6 +202,10 @@ def calendario_get(
 @router.post(
     "/calendario.csv",
     summary="Descargar el calendario por geometría en CSV",
+    description=(
+        "Igual que `GET /descargas/calendario.csv`, con los parámetros en el cuerpo JSON y "
+        "polígono opcional en `geometria`."
+    ),
     response_class=StreamingResponse,
 )
 def calendario_post(datos: DatosListosDep, pedido: PedidoCalendario) -> StreamingResponse:

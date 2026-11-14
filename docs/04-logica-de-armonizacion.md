@@ -17,6 +17,7 @@
 
 - S-NPP y NOAA-20 cuentan prácticamente igual (razón 0,99), así que el cambio de referencia **no requiere corrección**.
 - **NOAA-21 nunca se suma**, para no contar dos veces el mismo fuego.
+- Las fechas de esta tabla para la referencia VIIRS **se leen de `metadata.referencia_viirs`** (docs/02 §9): si el pipeline cambia la fecha de paso a NOAA-20, la API la sigue sin cambios de código. Solo se aceptan `SNPP` y `N20`; cualquier otro valor deja la API en estado `degradado`.
 
 ## 3. Algoritmo por consulta
 
