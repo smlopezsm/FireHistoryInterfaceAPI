@@ -167,6 +167,12 @@ Compara un mes con el **mismo mes de todos los años** de la serie armonizada.
 | `categoria` | enum | `muy_por_debajo` (< p10), `por_debajo` (< p25), `normal`, `por_encima` (> p75), `muy_por_encima` (> p90) |
 | `anios_usados` | integer | Cantidad de años en la comparación |
 
+El histórico excluye el mes evaluado. Los percentiles de corte usan el rango más próximo
+hacia arriba en la muestra ordenada. `percentil` indica el porcentaje de valores históricos
+menores o iguales al valor evaluado. Con menos de 10 años o si el mes evaluado está incompleto,
+`categoria` es nula. Si no hay años comparables, también son nulos la mediana, los cuartiles
+y el percentil.
+
 ## `GET /mapa/celdas`
 
 | Parámetro | Tipo | Obligatorio | Default | Descripción |

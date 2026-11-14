@@ -14,7 +14,7 @@ from app.config import Settings, get_settings
 from app.db import Datos
 from app.errores import registrar_manejadores
 from app.limites import LimiteBodyMiddleware
-from app.routers import armonizacion, health, metadata, provincias
+from app.routers import anomalia, armonizacion, health, metadata, provincias
 
 PREFIJO = "/api/v1"
 
@@ -89,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(metadata.router, prefix=PREFIJO)
     app.include_router(provincias.router, prefix=PREFIJO)
     app.include_router(armonizacion.router, prefix=PREFIJO)
+    app.include_router(anomalia.router, prefix=PREFIJO)
     return app
 
 
