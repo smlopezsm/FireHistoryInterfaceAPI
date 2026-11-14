@@ -8,8 +8,9 @@ En `tests/fixtures/` se incluye un **mini dataset** (menos de 1 MB) con el mismo
 |---|---|
 | `dim_provincias.parquet` | 2 provincias ficticias (`P1` en región `R1`, `P2` en `R2`) |
 | `dim_celdas.parquet` | 20 celdas (10 por provincia) |
-| `conteos_celda_dia/` | 2001, 2011, 2012, 2022, 2026, con casos elegidos a mano |
-| `factores_provincia_mes.parquet` | Factores fijos y conocidos (por ejemplo `P1` = 3,0 en todos los meses) |
+| `conteos_celda_dia/` | 2001, 2006, 2011, 2012, 2022, 2026, con casos elegidos a mano |
+| `factores_provincia_mes.parquet` | Factores fijos y conocidos (por ejemplo `P1` = 3,0 en todos los meses); falta `(P2, mes 5)` para la U8 |
+| `factores_region_mes.parquet` | Factores de respaldo de `R1`, `R2` y `Argentina` (`R2` mes 5 conocido, para la U8) |
 | `satelite_operativo.parquet` | Incluye una caída de S-NPP de 3 días en 2022 |
 | `rangos.parquet` | Los valores de la tabla inicial |
 

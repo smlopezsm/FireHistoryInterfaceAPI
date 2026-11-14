@@ -73,6 +73,6 @@ Sumar los límites provincia por provincia da un rango **conservador** (más anc
 | Zona sin ninguna celda | 400 `ZONA_INVALIDA` ("La zona no contiene celdas de Argentina") |
 | Zona que cruza provincias | Se calcula por provincia y se suma (§3) |
 | Mes en curso (incompleto) | Se devuelve con `parcial: true` y sin categoría de anomalía |
-| Factor faltante (provincia, mes) | Se usa el de la región; si falta, el nacional (`nivel_origen` informa cuál) |
+| Factor faltante (provincia, mes) | Se usa el de la región de `factores_region_mes.parquet`; si falta, el nacional (`region = Argentina`). `nivel_origen` informa cuál |
 | Días antes de 2000-11-01 | No hay datos: los meses no se devuelven |
 | Diferencia entre SP y NRT | Transparente: la columna `fuente` existe en `focos/`, pero los conteos los unifican |

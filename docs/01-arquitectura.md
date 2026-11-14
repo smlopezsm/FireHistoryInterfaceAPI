@@ -33,7 +33,8 @@ El sistema tiene **tres piezas**, cada una en su propio repositorio:
 │  │  ├── focos/anio=YYYY/*.parquet        detecciones limpias    │ │
 │  │  ├── conteos_celda_dia/anio=YYYY/*.parquet                   │ │
 │  │  ├── dim_celdas.parquet · dim_provincias.parquet             │ │
-│  │  ├── factores_provincia_mes.parquet · factores_terra.parquet │ │
+│  │  ├── factores_provincia_mes.parquet (tipo modis / terra)     │ │
+│  │  ├── factores_region_mes.parquet  respaldo región / país     │ │
 │  │  ├── rangos.parquet · satelite_operativo.parquet             │ │
 │  │  ├── puntos_industriales.parquet                             │ │
 │  │  └── metadata.json                                           │ │
