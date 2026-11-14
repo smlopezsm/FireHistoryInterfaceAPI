@@ -13,7 +13,8 @@ from app.cache import CacheMiddleware
 from app.config import Settings, get_settings
 from app.db import Datos
 from app.errores import registrar_manejadores
-from app.routers import health, metadata
+from app.limites import LimiteBodyMiddleware
+from app.routers import health, metadata, provincias
 
 PREFIJO = "/api/v1"
 
@@ -31,6 +32,14 @@ siempre se informa `estado`, `minimo`, `maximo` y `confianza`.
 
 ETIQUETAS = [
     {"name": "estado", "description": "Salud del servicio y versión de los datos."},
+    {
+        "name": "zonas",
+        "description": (
+            "Provincias y zonas de consulta. Toda consulta usa **una sola** zona: "
+            "`provincia_id`, `bbox` o un polígono GeoJSON (solo por POST). Entran las celdas "
+            "de 5 × 5 km cuyo centroide cae dentro de la zona."
+        ),
+    },
 ]
 
 
@@ -65,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = config
 
     app.add_middleware(CacheMiddleware)
+    app.add_middleware(LimiteBodyMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors_origins,
@@ -77,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router, prefix=PREFIJO)
     app.include_router(metadata.router, prefix=PREFIJO)
+    app.include_router(provincias.router, prefix=PREFIJO)
     return app
 
 

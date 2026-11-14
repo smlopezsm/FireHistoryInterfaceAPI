@@ -56,5 +56,5 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["duckdb.*", "pyarrow.*"]
+module = ["duckdb.*", "pyarrow.*", "shapely.*"]
 ignore_missing_imports = true
