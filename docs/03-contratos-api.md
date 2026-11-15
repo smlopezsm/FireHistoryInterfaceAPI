@@ -13,7 +13,7 @@
 | Celdas de una zona | Con `bbox` o polígono, entran las celdas cuyo **centroide** cae dentro de la zona. Con `provincia_id`, las celdas que `dim_celdas` asigna a esa provincia (mayor fracción de área), igual que en `conteos_celda_dia` |
 | Números | Conteos como enteros; armonizados con 1 decimal |
 | Nulos | `null` significa "**no hay dato**" (por ejemplo VIIRS antes de 2012), **nunca** cero |
-| Caché | `Cache-Control: public, max-age=3600` y `ETag = data_version` |
+| Caché | `Cache-Control: public, max-age=3600` y `ETag = "<data_version>-<hash>"` (incluye ruta y query canonizados) |
 | CORS | Solo el dominio del frontend (variable `CORS_ORIGINS`) |
 | Idioma | Claves de los campos en español, sin tildes |
 

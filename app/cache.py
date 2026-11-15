@@ -1,6 +1,9 @@
-"""Cabeceras de caché (docs/03 §Convenciones): `Cache-Control` y `ETag = data_version`."""
+"""Cabeceras de caché (docs/03 §Convenciones): `Cache-Control` y `ETag` por ruta y versión."""
 
 from __future__ import annotations
+
+from hashlib import sha256
+from urllib.parse import urlencode
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -22,16 +25,15 @@ class CacheMiddleware(BaseHTTPMiddleware):
     async def _con_version(
         self, request: Request, call_next: RequestResponseEndpoint, version: str | None
     ) -> Response:
-        cacheable = (
-            request.method in ("GET", "HEAD")
-            and request.url.path.startswith("/api/v1/")
-            and not request.url.path.startswith(SIN_CACHE)
-            and version is not None
-        )
-        if not cacheable:
+        if (
+            request.method not in ("GET", "HEAD")
+            or not request.url.path.startswith("/api/v1/")
+            or request.url.path.startswith(SIN_CACHE)
+            or version is None
+        ):
             return await call_next(request)
 
-        etag = f'"{version}"'
+        etag = _etag(version, request)
         if etag in _etags(request.headers.get("if-none-match")):
             return Response(status_code=304, headers={"ETag": etag, "Cache-Control": CACHE_CONTROL})
         respuesta = await call_next(request)
@@ -39,6 +41,14 @@ class CacheMiddleware(BaseHTTPMiddleware):
             respuesta.headers["ETag"] = etag
             respuesta.headers["Cache-Control"] = CACHE_CONTROL
         return respuesta
+
+
+def _etag(version: str, request: Request) -> str:
+    """Genera un ETag fuerte ligado a `data_version`, ruta y query params canonizados."""
+    consulta = urlencode(sorted(request.query_params.multi_items()))
+    clave = f"{request.url.path}?{consulta}" if consulta else request.url.path
+    resumen = sha256(clave.encode("utf-8")).hexdigest()[:12]
+    return f'"{version}-{resumen}"'
 
 
 def _etags(cabecera: str | None) -> set[str]:
