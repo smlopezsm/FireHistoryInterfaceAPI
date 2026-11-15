@@ -9,6 +9,11 @@ from pydantic import BaseModel, Field
 DESC_PROVINCIA = "Código INDEC de la provincia, por ejemplo `74` (San Luis)."
 DESC_REGION = "Nombre de la región, por ejemplo `NOA`, `NEA`, `Pampeana`, `Cuyo` o `Patagonia`."
 DESC_BBOX = "Rectángulo `oeste,sur,este,norte` en grados (EPSG:4326)."
+# Frase común de las descripciones de Swagger de los endpoints que reciben una zona.
+DESC_ZONA_RUTA = (
+    "La zona es **una sola** de `provincia_id`, `region` o `bbox` (por query); la versión POST "
+    "acepta además un polígono GeoJSON en `geometria`."
+)
 DESC_GEOMETRIA = (
     "Polígono GeoJSON (`Polygon` o `MultiPolygon`, EPSG:4326) de hasta 2.000 vértices. "
     "Entran las celdas cuyo centroide cae dentro."

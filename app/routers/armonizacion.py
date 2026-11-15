@@ -15,7 +15,7 @@ from app.schemas.armonizacion import (
     PeriodoConsulta,
     Serie,
 )
-from app.schemas.zonas import PedidoZona
+from app.schemas.zonas import DESC_ZONA_RUTA, PedidoZona
 from app.services.armonizacion import agrupar_anios, calcular_meses, pocos_datos, resumir
 from app.services.zonas import resolver_zona
 
@@ -60,9 +60,7 @@ def _serie(
     description=(
         "Matriz mes × año de focos de la zona, a escala VIIRS S-NPP. Cada mes indica si el valor "
         "es observado, estimado (MODIS × factor provincia × mes) o mixto, con su rango del 80 % y"
-        " su confianza. `capa` solo cambia `unidad` y `resumen`. La zona es **una sola** de "
-        "`provincia_id` o `bbox` (por query); la versión POST acepta además un polígono GeoJSON "
-        "en `geometria`."
+        " su confianza. `capa` solo cambia `unidad` y `resumen`. " + DESC_ZONA_RUTA
     ),
 )
 def calendario_get(
@@ -89,9 +87,7 @@ def calendario_post(datos: DatosListosDep, pedido: PedidoCalendario) -> Calendar
     description=(
         "Serie de la zona por mes (`granularidad=mes`) o por año (`anio`). Cada punto tiene los "
         "mismos campos que los meses de `/calendario`; en la serie anual se suman los meses y la "
-        "fracción estimada se calcula sobre los días del año. La zona es **una sola** de "
-        "`provincia_id` o `bbox` (por query); la versión POST acepta además un polígono GeoJSON "
-        "en `geometria`."
+        "fracción estimada se calcula sobre los días del año. " + DESC_ZONA_RUTA
     ),
 )
 def serie_get(

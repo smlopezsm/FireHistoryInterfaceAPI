@@ -14,7 +14,7 @@ from app.db import Datos
 from app.deps import DatosListosDep, ZonaQueryDep
 from app.errores import ApiError, datos_no_disponibles
 from app.schemas.armonizacion import PedidoCalendario, PeriodoConsulta
-from app.schemas.zonas import PedidoZona
+from app.schemas.zonas import DESC_ZONA_RUTA, PedidoZona
 from app.services.armonizacion import calcular_meses, pocos_datos
 from app.services.zonas import ZonaResuelta, resolver_zona
 
@@ -148,8 +148,7 @@ def _calendario(datos: Datos, pedido: PedidoZona, consulta: PeriodoConsulta) -> 
     description=(
         "Focos individuales de la zona y el período en CSV (UTF-8), filtrables por sensor. La "
         "primera línea es un comentario con la cita a NASA FIRMS. Máximo 500.000 filas; si se "
-        "supera, responde 413. La zona es **una sola** de `provincia_id` o `bbox` (por query); la"
-        " versión POST acepta además un polígono GeoJSON en `geometria`."
+        "supera, responde 413. " + DESC_ZONA_RUTA
     ),
     response_class=StreamingResponse,
 )
@@ -189,8 +188,7 @@ def focos_post(request: Request, datos: DatosListosDep, pedido: PedidoFocos) -> 
     summary="Descargar el calendario en CSV",
     description=(
         "El calendario mensual de la zona en CSV, con las mismas columnas que los meses de "
-        "`/calendario` (salvo `parcial`). La zona es **una sola** de `provincia_id` o `bbox` (por"
-        " query); la versión POST acepta además un polígono GeoJSON en `geometria`."
+        "`/calendario` (salvo `parcial`). " + DESC_ZONA_RUTA
     ),
     response_class=StreamingResponse,
 )
