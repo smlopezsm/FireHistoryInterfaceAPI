@@ -1,12 +1,14 @@
 # 09 · Propuesta: endpoint dedicado diario para MODIS y VIIRS
 
+> **Estado: propuesta, no implementada.** Ningún endpoint de este documento existe en la API. Si se aprueba, el contrato se agrega primero en [03](03-contratos-api.md).
+
 Propuesta técnica e implementación planificada para incorporar una segunda vista de **frecuencia diaria con datos crudos observados** (`modis` y `viirs`) para comparación rápida, manteniendo intactas las vistas **mensuales y anuales armonizadas** (`/api/v1/serie` y `/api/v1/calendario`).
 
 ## Motivación y restricción estadística
 
 La tabla base `conteos_celda_dia` y `satelite_operativo` ([`app/db.py`](../app/db.py)) ya tienen granularidad diaria. Sin embargo, los factores de armonización (`factores_provincia_mes`, `factores_region_mes`) y la tabla de incertidumbre (`rangos.parquet`) están calibrados sobre **totales mensuales por provincia** ([`04-logica-de-armonizacion.md`](04-logica-de-armonizacion.md)).
 
-Aplicar el factor mensual sobre un día suelto con 0–2 focos introduce ruido por horarios de pasada y nubosidad, rompe el umbral de confianza (`est_modis >= 21`) y vuelve binaria la fracción estimada. Por eso se separan las dos vistas:
+Aplicar el factor mensual sobre un día suelto con 0–2 focos introduce ruido por horarios de pasada y nubosidad, deja el rango del 80 % más ancho que el propio valor (así que la confianza nunca podría ser `media`, ver [04 §5](04-logica-de-armonizacion.md#5-confianza)) y vuelve binaria la fracción estimada. Por eso se separan las dos vistas:
 
 | Vista | Granularidad | Contenido | Endpoint |
 |---|---|---|---|

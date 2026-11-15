@@ -35,8 +35,8 @@ Sirve conteos de focos **armonizados a escala VIIRS** por región y período, pa
 | [docs/04-logica-de-armonizacion.md](docs/04-logica-de-armonizacion.md) | Cómo la API calcula observado, estimado y rangos |
 | [docs/05-despliegue.md](docs/05-despliegue.md) | Dockerfile, variables de entorno, Dokploy, CI/CD |
 | [docs/06-pruebas-y-aceptacion.md](docs/06-pruebas-y-aceptacion.md) | Plan de pruebas y criterios de aceptación |
-| [docs/07-spec-kit.md](docs/07-spec-kit.md) | Cómo trabajamos con GitHub Spec Kit (SDD) y los textos iniciales |
 | [docs/08-proximos-pasos.md](docs/08-proximos-pasos.md) | **Estado actual, decisiones tomadas y pendientes** (para retomar el trabajo) |
+| [docs/09-propuesta-crudos-diarios.md](docs/09-propuesta-crudos-diarios.md) | Propuesta (no implementada) de un endpoint diario con conteos crudos |
 
 ## Estructura del repositorio
 
