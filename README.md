@@ -19,7 +19,7 @@ Sirve conteos de focos **armonizados a escala VIIRS** por región y período, pa
 |---|---|
 | Lenguaje / framework | Python 3.12 + FastAPI + Uvicorn (2 workers) |
 | Motor de consultas | DuckDB embebido, **solo lectura**, sobre Parquet |
-| Datos | Generados por el pipeline [`ml_nasaspaceapp`](https://github.com/DenisPablo/ml_nasaspaceapp) y montados en `/var/data` |
+| Datos | Generados por el pipeline [`ML_NasaSpaceApp`](https://github.com/DenisPablo/ML_NasaSpaceApp); la versión publicada está en `data/current/` y viaja **dentro de la imagen** (`/var/data/current`) |
 | Alcance | Argentina completa, noviembre 2000 → hoy |
 | Producto principal | **Conteos de focos** (no FRP) |
 | Despliegue | Docker en VPS DonWeb (4 GB / 2 vCPU) con Dokploy + Traefik |
@@ -36,25 +36,28 @@ Sirve conteos de focos **armonizados a escala VIIRS** por región y período, pa
 | [docs/05-despliegue.md](docs/05-despliegue.md) | Dockerfile, variables de entorno, Dokploy, CI/CD |
 | [docs/06-pruebas-y-aceptacion.md](docs/06-pruebas-y-aceptacion.md) | Plan de pruebas y criterios de aceptación |
 | [docs/07-spec-kit.md](docs/07-spec-kit.md) | Cómo trabajamos con GitHub Spec Kit (SDD) y los textos iniciales |
-| [docs/08-proximos-pasos.md](docs/08-proximos-pasos.md) | **Estado actual, decisiones tomadas y plan de F3–F7** (para retomar el trabajo) |
+| [docs/08-proximos-pasos.md](docs/08-proximos-pasos.md) | **Estado actual, decisiones tomadas y pendientes** (para retomar el trabajo) |
 
-## Estructura prevista del repositorio
+## Estructura del repositorio
 
 ```text
 FireHistoryInterfaceAPI/
 ├── app/
-│   ├── main.py              # FastAPI app, routers, CORS, healthcheck
+│   ├── main.py              # Fábrica de la app, routers, middlewares, ciclo de vida
 │   ├── config.py            # Variables de entorno (pydantic-settings)
-│   ├── db.py                # Conexión DuckDB read-only por worker
-│   ├── routers/             # health, metadata, provincias, calendario, serie, anomalia, mapa, descargas
-│   ├── services/            # armonizacion.py, agregaciones.py, geometria.py
+│   ├── db.py                # Conexión DuckDB por worker, versión de datos, recarga
+│   ├── cache.py · limites.py · errores.py · deps.py
+│   ├── routers/             # Un archivo por grupo de endpoints (ver docs/03)
+│   ├── services/            # armonizacion, anomalia, mapa, zonas
 │   └── schemas/             # Modelos Pydantic de request/response
-├── tests/                   # pytest + datos de prueba chicos (fixtures Parquet)
+├── data/current/            # Versión de datos publicada (entra en la imagen)
+├── scripts/                 # Fixtures, datos demo, esquemas y grilla
+├── tests/                   # pytest + fixtures Parquet chicos
 ├── docs/                    # Esta documentación
 ├── Dockerfile
 ├── .dockerignore
 ├── pyproject.toml
-└── .github/workflows/       # build-push.yml (imagen a GHCR + webhook Dokploy)
+└── .github/workflows/       # build-push.yml (pruebas, imagen a GHCR + webhook Dokploy)
 ```
 
 ## Inicio rápido (local)

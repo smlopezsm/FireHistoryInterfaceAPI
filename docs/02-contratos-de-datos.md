@@ -7,7 +7,7 @@ Este documento define **el formato exacto de cada archivo** que la API lee desde
 | Regla | Valor |
 |---|---|
 | Formato | Apache Parquet, compresión ZSTD |
-| Fechas | `DATE` en **hora local de Argentina** (UTC−3; con el huso histórico de cada provincia cuando corresponda) |
+| Fechas | `DATE` en **hora local de Argentina**, calculada como **UTC−3 fijo** para todo el país y todo el período (no aplica el horario de verano de 2007–2009 ni el huso propio de San Luis) |
 | Coordenadas | WGS84 (EPSG:4326), grados decimales, `FLOAT` |
 | Grilla | Albers custom Argentina, celdas de 5 × 5 km, `cell_id = fila · 460 + columna` |
 | Particionado | Estilo Hive por año: `anio=YYYY/part-0.parquet` en los archivos grandes |
@@ -38,7 +38,7 @@ Una fila = **un foco** que pasó los filtros de calidad y **no** está en un pun
 | `provincia_id` | `VARCHAR(2)` | Sí | Código INDEC de la provincia; nulo si cae fuera | `74` |
 | `anio` | `INT16` | No | Partición | `2024` |
 
-**Volumen esperado:** ~4,1 M filas (2000 → hoy) · ~100–200 MB en Parquet *(estimación; se confirma al generarlo)*.
+**Volumen:** varios millones de filas; el recuento exacto de cada versión está en `validacion.json` (`filas`) del paquete del pipeline.
 
 ---
 
@@ -181,7 +181,7 @@ Una fila = **día × satélite** desde el inicio de cada misión.
 | `frac_nocturna` | `FLOAT` | Proporción de detecciones nocturnas |
 | `n_focos` | `INT32` | Focos excluidos en ese punto |
 
-Versión inicial: **488 puntos** (80.681 focos excluidos). La API lo expone como capa informativa del mapa.
+La cantidad de puntos y de focos excluidos de cada versión está en `validacion.json` (`puntos_industriales`). La API lo expone como capa informativa del mapa.
 
 ---
 

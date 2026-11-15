@@ -15,25 +15,7 @@
 | Dependencias | `fastapi`, `uvicorn[standard]`, `duckdb`, `pyarrow`, `pydantic-settings`, `shapely` (validación de polígonos), `orjson` |
 | **Sin** | `lightgbm`, `scikit-learn`, compiladores |
 
-### Dockerfile de referencia
-
-```dockerfile
-FROM python:3.12-slim AS builder
-WORKDIR /build
-COPY pyproject.toml .
-RUN pip install --no-cache-dir --prefix=/install .
-
-FROM python:3.12-slim
-RUN useradd -u 10001 -m app
-COPY --from=builder /install /usr/local
-WORKDIR /srv
-COPY app ./app
-USER app
-EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=4).status==200 else 1)"
-CMD ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--workers","2","--proxy-headers"]
-```
+El archivo vigente es el [`Dockerfile`](../Dockerfile) de la raíz del repo; la tabla de arriba resume sus decisiones.
 
 ## 2. Variables de entorno
 
@@ -43,7 +25,8 @@ CMD ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--workers","2"
 | `DUCKDB_MEMORY_LIMIT` | No | `500MB` | Límite de memoria por conexión (una por worker) |
 | `DUCKDB_THREADS` | No | `1` | Hilos por conexión |
 | `QUERY_TIMEOUT_S` | No | `10` | Corte de consultas largas |
-| `CORS_ORIGINS` | **Sí** | — | Dominio del frontend, por ejemplo `https://fuegos.example.com.ar` |
+| `MAX_CONSULTAS_CONCURRENTES` | No | `4` | Consultas DuckDB simultáneas por worker; las demás esperan |
+| `CORS_ORIGINS` | **Sí** | — | Origen u orígenes del frontend separados por comas, por ejemplo `https://fuegos.example.com.ar` |
 | `RELOAD_TOKEN` | **Sí** | — | Token para `POST /admin/reload` |
 | `MAX_CELDAS_MAPA` | No | `20000` | Límite de `/mapa/celdas` |
 | `MAX_FILAS_CSV` | No | `500000` | Límite de `/descargas/focos.csv` |
@@ -84,8 +67,8 @@ CMD ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--workers","2"
 | 2. Firewall | `ufw allow 22,80,443/tcp && ufw enable` |
 | 3. Swap 4 GB | `fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile` + `vm.swappiness=10` |
 | 4. Dokploy | Script oficial de instalación de Dokploy |
-| 5. Carpeta de datos | `mkdir -p /var/data/releases` + usuario `deploy` con permiso solo sobre `/var/data` (para el rsync del pipeline) |
-| 6. Primera carga | `rsync` del paquete de datos → `releases/<version>` → `ln -sfn releases/<version> /var/data/current` |
+
+No hace falta preparar una carpeta de datos en el VPS: los datos vienen dentro de la imagen (§5 bis).
 
 ## 5 bis. Actualizar los datos
 
