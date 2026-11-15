@@ -17,6 +17,8 @@ dependencies = [
     "pydantic-settings>=2.7,<3",
     "shapely>=2.0,<3",
     "orjson>=3.10",
+    # Lo usa la app directamente (fetchnumpy en app/db.py, máscaras en app/services/zonas.py).
+    "numpy>=2",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +28,6 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.8",
     "mypy>=1.13",
-    "numpy>=2",
 ]
 
 # El código de la app se copia aparte en la imagen (COPY app); el paquete
