@@ -8,6 +8,8 @@ Sirve conteos de focos **armonizados a escala VIIRS** por región y período, pa
 - la descarga de los datos.
 
 > **No hay modelos de IA en el servidor.** La armonización se resuelve con **tablas de factores** precalculadas (provincia × mes). La API solo filtra, suma y multiplica sobre archivos Parquet con DuckDB.
+>
+> **Aviso:** Este proyecto es una **demostración** con fines exploratorios y educativos. Sus resultados y estimaciones no deben tomarse en ningún caso como verdad absoluta ni utilizarse como modelo predictivo ni para la toma de decisiones operativas o de emergencia.
 
 ---
 

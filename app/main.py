@@ -29,6 +29,10 @@ siempre se informa `estado`, `minimo`, `maximo` y `confianza`.
 
 - `null` significa **sin dato**, nunca cero.
 - Fuentes: NASA FIRMS (MODIS C6.1 y VIIRS 375 m). Límites: IGN vía API Georef.
+
+> **Aviso:** Esta API corresponde a una **demostración** con fines exploratorios. Sus
+> resultados y estimaciones no deben tomarse en ningún caso como verdad absoluta ni
+> utilizarse como modelo predictivo.
 """
 
 ETIQUETAS = [
