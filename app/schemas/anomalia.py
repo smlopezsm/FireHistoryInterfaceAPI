@@ -19,9 +19,9 @@ class Anomalia(BaseModel):
     valor: float = Field(description="Focos armonizados del mes.")
     referencia: Referencia = Field(
         description=(
-            "Era con la que se compara: `observada` (meses con `frac_estimada` ≤ 0,1, VIIRS) "
-            "o `estimada` (el resto, a partir de MODIS). El mes evaluado se compara solo con "
-            "años de su misma era (docs/04 §6)."
+            "Era con la que se compara, según la fecha: `observada` desde el primer mes "
+            "completo con referencia VIIRS (`2012-02`) o `estimada` antes (desde MODIS). El "
+            "mes evaluado se compara solo con años de su misma era (docs/04 §6)."
         )
     )
     mediana: float | None = Field(

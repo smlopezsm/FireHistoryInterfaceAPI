@@ -9,7 +9,7 @@ from app.deps import DatosListosDep, ZonaQueryDep
 from app.schemas.anomalia import Anomalia, PedidoAnomalia
 from app.schemas.armonizacion import PeriodoConsulta
 from app.schemas.zonas import PedidoZona
-from app.services.anomalia import comparar
+from app.services.anomalia import comparar, primer_mes_observado
 from app.services.armonizacion import calcular_meses
 from app.services.zonas import resolver_zona
 
@@ -18,7 +18,12 @@ router = APIRouter(tags=["focos"])
 
 def _anomalia(datos: Datos, pedido: PedidoZona, mes: str | None) -> Anomalia:
     zona = resolver_zona(datos, pedido)
-    return comparar(calcular_meses(datos, zona, PeriodoConsulta()), mes)
+    meses = calcular_meses(datos, zona, PeriodoConsulta())
+    assert datos.metadata is not None  # calcular_meses ya lo exige
+    # Era observada desde el primer mes completo con referencia VIIRS (docs/04 §6).
+    inicios = [r.desde for r in datos.metadata.referencia_viirs]
+    inicio = primer_mes_observado(min(inicios)) if inicios else "9999-12"
+    return comparar(meses, mes, inicio_observado=inicio)
 
 
 @router.get(
