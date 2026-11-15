@@ -83,8 +83,6 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-15**.
 
 ## 6. Entorno local
 
-- Python 3.12 con `uv`: `uv venv --python 3.12 .venv && uv pip install -e ".[dev]"`.
-- Datos demo: `.venv/bin/python scripts/make_demo_data.py` → `data/demo/` (sintéticos, fuera del repo).
-- Levantar: `DATA_DIR=data/demo CORS_ORIGINS=http://localhost:5173 RELOAD_TOKEN=dev .venv/bin/uvicorn app.main:app --workers 2`.
+- Instalación, datos demo y cómo levantar la API: [README §Inicio rápido](../README.md#inicio-rápido-local).
 - Los valores esperados de U1–U9 sobre los fixtures están anotados en `scripts/make_fixtures.py` (`CASOS`) y verificados en `tests/test_armonizacion.py`.
 - La grilla de los scripts está rotada respecto de lon/lat (Albers): no asumir que las celdas de una fila tienen la misma longitud.
