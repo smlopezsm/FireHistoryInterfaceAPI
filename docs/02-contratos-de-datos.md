@@ -134,16 +134,23 @@ Una fila = **región × mes calendario**, más el nivel nacional (6 × 12 = 72 f
 | `mult_bajo` | `FLOAT` | Multiplicador inferior (si `modis_min = 0`, es un **valor absoluto**) |
 | `mult_alto` | `FLOAT` | Multiplicador superior (si `modis_min = 0`, es un **valor absoluto**) |
 
-**Valores iniciales** (calibración 2012–2022, cobertura medida: 77,9 %):
+**Valores publicados** (versión `20261114T174945`, calibración 2012–2025 dejando un año afuera):
 
 | modis_min | modis_max | mult_bajo | mult_alto |
 |---:|---:|---:|---:|
-| 0 | 0 | 0 | 10 |
-| 1 | 5 | 0.46 | 4.49 |
-| 6 | 20 | 0.55 | 1.86 |
-| 21 | 100 | 0.63 | 1.33 |
-| 101 | 500 | 0.73 | 1.24 |
-| 501 | 2147483647 | 0.82 | 1.18 |
+| 0 | 0 | 0 | 9 |
+| 1 | 5 | 0.47 | 4.44 |
+| 6 | 20 | 0.53 | 1.87 |
+| 21 | 100 | 0.62 | 1.34 |
+| 101 | 500 | 0.74 | 1.24 |
+| 501 | 2147483647 | 0.83 | 1.17 |
+
+Cobertura medida:
+- **83,1 %** dentro de muestra (`validacion.json`).
+- **81,0 %** dejando un año afuera.
+- **77,1 %** en la prueba hacia adelante (calibración 2012–2019, prueba 2020–2025). En el tramo de más de 500 focos MODIS baja a **64,0 %**.
+
+La propuesta original informaba 77,9 % (calibración 2012–2022). El detalle por tramo, por provincia y para Terra sola está en el [veredicto de armonización](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/analisis/veredicto-armonizacion/veredicto-armonizacion.md) del pipeline.
 
 ---
 
@@ -215,4 +222,4 @@ Versión inicial: **488 puntos** (80.681 focos excluidos). La API lo expone como
 
 - NASA FIRMS — MODIS C6.1 y VIIRS 375 m Active Fire (SP y NRT).
 - Límites provinciales: Instituto Geográfico Nacional, vía API Georef (datos.gob.ar).
-- Método de armonización: ver `propuesta_B_calendario_focos_armonizado_ES.md` (proyecto del equipo).
+- Método de armonización: [`CLASIFICACION.md`](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/CLASIFICACION.md) del pipeline y su [veredicto científico](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/analisis/veredicto-armonizacion/veredicto-armonizacion.md). El documento original de la propuesta B (`propuesta_B_calendario_focos_armonizado_ES.md`) no está publicado en ningún repo del proyecto.
