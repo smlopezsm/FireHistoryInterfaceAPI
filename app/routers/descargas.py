@@ -50,6 +50,7 @@ CALENDARIO = (
     "estado",
     "frac_estimada",
     "confianza",
+    "dias_sin_modis",
 )
 
 

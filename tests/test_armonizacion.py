@@ -154,3 +154,91 @@ def test_calendario_y_serie_por_region(cliente):
     assert serie.status_code == 200, serie.text
     assert serie.json()["zona"]["tipo"] == "region"
     assert serie.json()["puntos"][0]["armonizado"] == 14
+
+
+def _apagar_modis(destino, fechas, satelite="Terra"):
+    """Deja `satelite` no operativo en `fechas` (texto YYYY-MM-DD) en una copia de los fixtures."""
+    import pyarrow as pa
+    import pyarrow.compute as pc
+    import pyarrow.parquet as pq
+
+    ruta = destino / "satelite_operativo.parquet"
+    tabla = pq.read_table(ruta)
+    apagar = pc.and_(
+        pc.equal(tabla["satelite"], satelite),
+        pc.is_in(pc.cast(tabla["fecha"], pa.string()), value_set=pa.array(fechas)),
+    )
+    columna = tabla.schema.get_field_index("operativo")
+    operativo = pc.if_else(apagar, False, tabla["operativo"])
+    pq.write_table(tabla.set_column(columna, tabla.schema.field(columna), operativo), ruta)
+
+
+def test_modis_caido_se_informa_y_ensancha_el_maximo(tmp_path, hacer_cliente):
+    # H9: un día estimado sin Terra no puede sumar 0 en silencio.
+    destino = tmp_path / "datos"
+    shutil.copytree(FIXTURES, destino)
+    _apagar_modis(destino, ["2006-08-10"])
+    cliente = hacer_cliente(data_dir=destino)
+    r = cliente.get(
+        "/api/v1/calendario", params={"provincia_id": "P1", "desde": "2006-08", "hasta": "2006-08"}
+    )
+    assert r.status_code == 200, r.text
+    (mes,) = r.json()["meses"]
+    # U1 sin cambios en el valor (30,0) ni en el mínimo (16,5); el máximo (55,8) se
+    # escala por los días con MODIS: 55,8 x 31 / 30.
+    assert mes["dias_sin_modis"] == 1
+    assert (mes["armonizado"], mes["minimo"]) == (30, 16.5)
+    assert mes["maximo"] == pytest.approx(55.8 * 31 / 30, abs=0.1)
+    assert mes["confianza"] == "baja"
+
+
+def test_aqua_caido_cuenta_desde_2002(tmp_path, hacer_cliente):
+    destino = tmp_path / "datos"
+    shutil.copytree(FIXTURES, destino)
+    _apagar_modis(destino, ["2006-08-10", "2006-08-11"], satelite="Aqua")
+    cliente = hacer_cliente(data_dir=destino)
+    r = cliente.get(
+        "/api/v1/serie",
+        params={
+            "provincia_id": "P1",
+            "desde": "2006-01",
+            "hasta": "2006-12",
+            "granularidad": "anio",
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["puntos"][0]["dias_sin_modis"] == 2
+
+
+def test_dias_observados_no_cuentan_como_sin_modis(tmp_path, hacer_cliente):
+    # Si la referencia VIIRS operó, que falte MODIS no importa.
+    destino = tmp_path / "datos"
+    shutil.copytree(FIXTURES, destino)
+    _apagar_modis(destino, ["2022-07-04"])
+    cliente = hacer_cliente(data_dir=destino)
+    r = cliente.get(
+        "/api/v1/calendario", params={"provincia_id": "P1", "desde": "2022-07", "hasta": "2022-07"}
+    )
+    (mes,) = r.json()["meses"]
+    assert (mes["dias_sin_modis"], mes["confianza"]) == (0, "alta")
+
+
+def test_fixtures_sin_modis_caido(cliente):
+    r = cliente.get("/api/v1/calendario", params={"provincia_id": "P1"})
+    assert {m["dias_sin_modis"] for m in r.json()["meses"]} == {0}
+
+
+def test_estimado_con_factor_no_provincial(cliente):
+    # H13: U8 (P2, mayo) usa el factor de la región para todo su estimado.
+    from app.schemas.armonizacion import PeriodoConsulta
+    from app.schemas.zonas import PedidoZona
+    from app.services.armonizacion import calcular_meses
+    from app.services.zonas import resolver_zona
+
+    datos = cliente.app.state.datos
+    zona = resolver_zona(datos, PedidoZona(provincia_id="P2"))
+    meses = calcular_meses(datos, zona, PeriodoConsulta(desde="2011-05", hasta="2011-05"))
+    assert meses["2011-05"].est_no_provincial == pytest.approx(14.0)
+    zona = resolver_zona(datos, PedidoZona(provincia_id="P1"))
+    meses = calcular_meses(datos, zona, PeriodoConsulta(desde="2011-05", hasta="2011-05"))
+    assert meses["2011-05"].est_no_provincial == 0

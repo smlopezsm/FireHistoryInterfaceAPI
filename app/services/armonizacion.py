@@ -20,6 +20,9 @@ POCOS_DATOS = {"94", "78", "02"}
 def cobertura_sql(referencias: list[ReferenciaViirs]) -> str:
     """CTE con la referencia VIIRS de cada día (de `metadata.referencia_viirs`) y si operó.
 
+    `modis_operativo` indica si estuvo el MODIS con que se estima ese día: Terra antes
+    de 2002-07-04 y Terra + Aqua desde entonces (docs/04 §5). Sin fila cuenta como caído.
+
     Los días operativos se cuentan independientemente de las filas de focos. Los valores
     vienen de un modelo validado (satélite `SNPP` o `N20` y fechas), así que es seguro
     escribirlos en el SQL.
@@ -34,9 +37,14 @@ WITH dias AS (
     SELECT CAST(dia AS DATE) AS fecha, {referencia} AS referencia
     FROM generate_series(?::DATE, ?::DATE, INTERVAL 1 DAY) AS fechas(dia)
 ), cobertura AS (
-    SELECT d.fecha, d.referencia, coalesce(s.operativo, false) AS operativo
-    FROM dias d LEFT JOIN satelite_operativo s
-        ON s.fecha = d.fecha AND s.satelite = d.referencia
+    SELECT d.fecha, d.referencia, coalesce(s.operativo, false) AS operativo,
+           coalesce(t.operativo, false)
+               AND (d.fecha < DATE '2002-07-04' OR coalesce(a.operativo, false))
+               AS modis_operativo
+    FROM dias d
+    LEFT JOIN satelite_operativo s ON s.fecha = d.fecha AND s.satelite = d.referencia
+    LEFT JOIN satelite_operativo t ON t.fecha = d.fecha AND t.satelite = 'Terra'
+    LEFT JOIN satelite_operativo a ON a.fecha = d.fecha AND a.satelite = 'Aqua'
 )
 """
 
@@ -54,7 +62,8 @@ CONTEOS_SQL = """
 
 AGREGAR = """, meses AS (
     SELECT date_trunc('month', fecha)::DATE AS mes, count(*) AS dias,
-           count(*) FILTER (WHERE NOT operativo) AS estimados
+           count(*) FILTER (WHERE NOT operativo) AS estimados,
+           count(*) FILTER (WHERE NOT operativo AND NOT modis_operativo) AS sin_modis
     FROM cobertura GROUP BY 1
 ), focos_mes AS (
     SELECT date_trunc('month', c.fecha)::DATE AS mes, c.provincia_id,
@@ -83,7 +92,9 @@ class Acumulado:
     modis: int = 0
     est_terra: int = 0
     est_modis: int = 0
+    sin_modis: int = 0
     armonizado: float = 0
+    est_no_provincial: float = 0
     minimo: float = 0
     maximo: float = 0
     parcial: bool = False
@@ -93,10 +104,20 @@ class Acumulado:
         estado: Estado = "estimado" if frac == 1 else "mixto" if frac else "observado"
         # docs/04 §5: lo observado (frac ≤ 0,1) es "alta" en cualquier zona; "pocos datos"
         # solo baja la confianza de lo estimado.
+        # H9: si más del 10 % de los días estimados no tuvo MODIS, el estimado puede quedar
+        # corto. H13: si más de la mitad de lo estimado usa factores de la región o del
+        # país, baja un nivel. Ver docs/04 §5.
+        estimado = self.armonizado - self.obs
         confianza: Confianza = "baja"
         if frac <= 0.1:
             confianza = "alta"
-        elif not pocos_datos and self.est_terra == 0 and self.est_modis >= 21:
+        elif (
+            not pocos_datos
+            and self.est_terra == 0
+            and self.est_modis >= 21
+            and self.sin_modis <= 0.1 * self.estimados
+            and self.est_no_provincial <= estimado / 2
+        ):
             confianza = "media"
         return Punto(
             periodo=periodo,
@@ -107,6 +128,7 @@ class Acumulado:
             maximo=round(self.maximo, 1),
             estado=estado,
             frac_estimada=frac,
+            dias_sin_modis=self.sin_modis,
             confianza=confianza,
             parcial=self.parcial,
         )
@@ -118,7 +140,9 @@ class Acumulado:
         self.modis += mes.modis
         self.est_terra += mes.est_terra
         self.est_modis += mes.est_modis
+        self.sin_modis += mes.sin_modis
         self.armonizado += mes.armonizado
+        self.est_no_provincial += mes.est_no_provincial
         self.minimo += mes.minimo
         self.maximo += mes.maximo
         self.parcial |= mes.parcial
@@ -175,19 +199,26 @@ def _sumar_provincia(
 ) -> None:
     terra, modis = fila["est_terra"], fila["est_modis"]
     total = terra + modis
-    estimado = minimo = maximo = 0.0
+    estimado = minimo = maximo = no_provincial = 0.0
     if mes.estimados and (total or mes.estimados == mes.dias):
         for tipo, conteo in (("terra", terra), ("modis", modis)):
             if conteo:
-                factor, _ = factores.obtener(
+                factor, origen = factores.obtener(
                     fila["provincia_id"], fila["region"], fila["mes"].month, tipo
                 )
                 estimado += conteo * factor
+                if origen != "provincia":
+                    no_provincial += conteo * factor
         rango = next((r for r in rangos if r["modis_min"] <= total <= r["modis_max"]), None)
         if rango is None:
             raise datos_no_disponibles()
         minimo = estimado * rango["mult_bajo"]
         maximo = estimado * rango["mult_alto"] if total else rango["mult_alto"]
+        # H9: los días sin MODIS no aportan focos; el máximo supone que fueron como el
+        # promedio de los días estimados que sí tuvieron MODIS (docs/04 §4).
+        con_modis = mes.estimados - mes.sin_modis
+        if mes.sin_modis and con_modis:
+            maximo *= mes.estimados / con_modis
 
     obs = fila["obs"]
     mes.obs += obs
@@ -195,6 +226,7 @@ def _sumar_provincia(
     mes.est_terra += terra
     mes.est_modis += modis
     mes.armonizado += obs + estimado
+    mes.est_no_provincial += no_provincial
     mes.minimo += obs + minimo
     mes.maximo += obs + maximo
 
@@ -222,6 +254,7 @@ def calcular_meses(
             Acumulado(
                 dias=fila["dias"],
                 estimados=fila["estimados"],
+                sin_modis=fila["sin_modis"],
                 parcial=(
                     fecha == fin.replace(day=1) and fin.day < monthrange(fin.year, fin.month)[1]
                 ),
