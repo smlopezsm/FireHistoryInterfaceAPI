@@ -67,10 +67,36 @@ def test_metadata(cliente: TestClient) -> None:
 def test_cache_etag_y_304(cliente: TestClient) -> None:
     r = cliente.get("/api/v1/metadata")
     assert r.headers["cache-control"] == "public, max-age=3600"
-    assert r.headers["etag"] == f'"{VERSION}"'
+    assert r.headers["etag"].startswith(f'"{VERSION}-')
+    assert r.headers["etag"].endswith('"')
     r2 = cliente.get("/api/v1/metadata", headers={"If-None-Match": r.headers["etag"]})
     assert r2.status_code == 304
     assert r2.content == b""
+
+
+def test_cache_etag_distingue_rutas_query_y_errores(cliente: TestClient) -> None:
+    meta = cliente.get("/api/v1/metadata")
+    prov = cliente.get("/api/v1/provincias", headers={"If-None-Match": meta.headers["etag"]})
+    assert prov.status_code == 200
+    assert prov.headers["etag"] != meta.headers["etag"]
+
+    cal_a = cliente.get("/api/v1/calendario?provincia_id=P1&desde=2006-01")
+    cal_b = cliente.get("/api/v1/calendario?desde=2006-01&provincia_id=P1")
+    assert cal_a.status_code == 200
+    assert cal_a.headers["etag"] == cal_b.headers["etag"]
+
+    cal_p2 = cliente.get(
+        "/api/v1/calendario?provincia_id=P2&desde=2006-01",
+        headers={"If-None-Match": cal_a.headers["etag"]},
+    )
+    assert cal_p2.status_code == 200
+    assert cal_p2.headers["etag"] != cal_a.headers["etag"]
+
+    invalida = cliente.get(
+        "/api/v1/calendario?provincia_id=NO_EXISTE",
+        headers={"If-None-Match": meta.headers["etag"]},
+    )
+    assert invalida.status_code == 404
 
 
 def test_cors_solo_frontend(cliente: TestClient) -> None:
