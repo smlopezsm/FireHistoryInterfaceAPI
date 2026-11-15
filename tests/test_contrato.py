@@ -109,36 +109,56 @@ def test_confianza_con_fixtures(cliente: TestClient, periodo: str, confianza: st
     assert r.json()["meses"][0]["confianza"] == confianza
 
 
+def _estimado(valor: float = 150, ancho: float = 100, **cambios: Any) -> Acumulado:
+    """Mes 100 % estimado con `valor` focos y un rango de `ancho` (Terra + Aqua)."""
+    base: dict[str, Any] = {
+        "dias": 31,
+        "estimados": 31,
+        "est_modis": 50,
+        "armonizado": valor,
+        "minimo": valor * 0.7,
+        "maximo": valor * 0.7 + ancho,
+    }
+    base.update(cambios)
+    return Acumulado(**base)
+
+
 @pytest.mark.parametrize(
     ("acumulado", "confianza"),
     [
         (Acumulado(dias=31, estimados=3, est_modis=2), "alta"),  # frac ≤ 0,1
-        (Acumulado(dias=31, estimados=31, est_modis=21), "media"),  # Terra + Aqua y ≥ 21
-        (Acumulado(dias=31, estimados=31, est_modis=20), "baja"),  # ≤ 20 focos
-        (Acumulado(dias=31, estimados=31, est_terra=50), "baja"),  # período solo Terra
+        # H15: media si el rango no es más ancho que lo estimado
+        (_estimado(ancho=100), "media"),
+        (_estimado(ancho=150), "media"),  # en el límite
+        (_estimado(ancho=151), "baja"),
+        (_estimado(valor=0, ancho=9, est_modis=0), "baja"),  # estimado 0
+        # mixto: el ancho se compara con lo estimado (150), no con el total (250)
+        (_estimado(valor=250, ancho=130, estimados=10, obs=100), "media"),
+        (_estimado(valor=250, ancho=160, estimados=10, obs=100), "baja"),
+        # mixto sin focos MODIS en los días estimados: no hay base para "media"
+        (_estimado(valor=100, ancho=0, estimados=10, obs=100, est_modis=0), "baja"),
+        (_estimado(est_modis=0, est_terra=50), "baja"),  # período solo Terra
         # H9: más del 10 % de los días estimados sin MODIS → baja
-        (Acumulado(dias=31, estimados=31, est_modis=50, sin_modis=4), "baja"),
-        (Acumulado(dias=31, estimados=31, est_modis=50, sin_modis=3), "media"),
+        (_estimado(sin_modis=4), "baja"),
+        (_estimado(sin_modis=3), "media"),
         (Acumulado(dias=31, estimados=3, est_modis=50, sin_modis=1), "alta"),  # frac ≤ 0,1
         # H13: más de la mitad del estimado con factor regional o nacional → baja
-        (
-            Acumulado(dias=31, estimados=31, est_modis=50, armonizado=150, est_no_provincial=76),
-            "baja",
-        ),
-        (
-            Acumulado(dias=31, estimados=31, est_modis=50, armonizado=150, est_no_provincial=75),
-            "media",
-        ),
-        (
-            Acumulado(
-                dias=31, estimados=10, obs=100, est_modis=50, armonizado=250, est_no_provincial=100
-            ),
-            "baja",
-        ),  # mixto: la mitad se mide sobre lo estimado (150), no sobre el total
+        (_estimado(est_no_provincial=76), "baja"),
+        (_estimado(est_no_provincial=75), "media"),
+        (_estimado(valor=250, estimados=10, obs=100, est_no_provincial=100), "baja"),
     ],
 )
 def test_reglas_de_confianza(acumulado: Acumulado, confianza: str) -> None:
     assert acumulado.punto("2010-08", pocos_datos=False).confianza == confianza
+
+
+def test_region_con_provincias_chicas_no_es_media() -> None:
+    # H15: 121 focos MODIS en total, pero repartidos: el rango sumado supera al valor.
+    region = Acumulado(dias=31, estimados=31, est_modis=121)
+    for _ in range(5):
+        region.sumar_mes(_estimado(valor=80, ancho=105, est_modis=24, dias=0, estimados=0))
+    assert region.est_modis == 241
+    assert region.punto("2002-12", pocos_datos=False).confianza == "baja"
 
 
 def _zona(areas: dict[str, float]) -> ZonaResuelta:

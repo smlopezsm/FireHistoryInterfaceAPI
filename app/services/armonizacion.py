@@ -106,7 +106,9 @@ class Acumulado:
         # solo baja la confianza de lo estimado.
         # H9: si más del 10 % de los días estimados no tuvo MODIS, el estimado puede quedar
         # corto. H13: si más de la mitad de lo estimado usa factores de la región o del
-        # país, baja un nivel. Ver docs/04 §5.
+        # país, baja un nivel. H15: "media" exige que el rango de lo estimado no sea más
+        # ancho que lo estimado (en una provincia equivale a ≥ 21 focos MODIS, y además
+        # vale para zonas de varias provincias). Ver docs/04 §5.
         estimado = self.armonizado - self.obs
         confianza: Confianza = "baja"
         if frac <= 0.1:
@@ -114,7 +116,8 @@ class Acumulado:
         elif (
             not pocos_datos
             and self.est_terra == 0
-            and self.est_modis >= 21
+            and estimado > 0
+            and self.maximo - self.minimo <= estimado
             and self.sin_modis <= 0.1 * self.estimados
             and self.est_no_provincial <= estimado / 2
         ):

@@ -150,7 +150,7 @@ La fracción estimada se calcula sobre todos los días cubiertos por la consulta
 
 ## `GET /anomalia` · `POST /anomalia`
 
-Compara un mes con el **mismo mes de todos los años** de la serie armonizada.
+Compara un mes con el **mismo mes de los demás años de su misma era** de la serie armonizada: observada (VIIRS) o estimada (desde MODIS). Ver [04 §6](04-logica-de-armonizacion.md#6-anomalía-mes-vs-lo-normal).
 
 | Parámetro | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
@@ -163,14 +163,15 @@ Compara un mes con el **mismo mes de todos los años** de la serie armonizada.
 |---|---|---|
 | `mes` | `YYYY-MM` | Mes evaluado |
 | `valor` | number | Focos armonizados del mes |
-| `mediana` | number | Mediana del mismo mes en todos los años disponibles |
+| `referencia` | enum | `observada` (mes con `frac_estimada ≤ 0,1`) o `estimada`: era con la que se compara |
+| `mediana` | number | Mediana del mismo mes en los demás años completos de la misma era |
 | `p25`, `p75` | number | Cuartiles históricos |
 | `razon` | number | `valor / mediana` (null si la mediana es 0) |
 | `percentil` | number | Posición del mes en la historia (0–100) |
 | `categoria` | enum | `muy_por_debajo` (< p10), `por_debajo` (< p25), `normal`, `por_encima` (> p75), `muy_por_encima` (> p90) |
 | `anios_usados` | integer | Cantidad de años en la comparación |
 
-El histórico excluye el mes evaluado y los meses incompletos (el mes en curso). Los percentiles de corte usan el rango más próximo
+El histórico excluye el mes evaluado, los meses incompletos (el mes en curso) y los años de la otra era. Los percentiles de corte usan el rango más próximo
 hacia arriba en la muestra ordenada. `percentil` indica el porcentaje de valores históricos
 menores o iguales al valor evaluado. Con menos de 10 años o si el mes evaluado está incompleto,
 `categoria` es nula. Si no hay años comparables, también son nulos la mediana, los cuartiles
