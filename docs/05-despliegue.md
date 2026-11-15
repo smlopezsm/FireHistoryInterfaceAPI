@@ -86,3 +86,19 @@ Los datos viajan **dentro de la imagen** (decisión del 2026-11-14). Para public
 |---|---|
 | Código de la API | En Dokploy, volver a desplegar la imagen `:<sha>` anterior |
 | Datos | En Dokploy, volver a desplegar la imagen `:<sha>` anterior (trae su versión de datos) |
+
+## 7. Verificar un despliegue
+
+`scripts/verificar_despliegue.py` revisa una API desplegada contra los datos de `data/current/`:
+- que `/health` dé `ok` con el mismo `data_version`;
+- calendario, serie anual, anomalía y `calendario.csv` de cada provincia;
+- las reglas del contrato mes por mes;
+- que las respuestas sean iguales a las de la API corrida localmente;
+- la clasificación;
+- los tiempos contra los objetivos de [06 §4](06-pruebas-y-aceptacion.md#4-pruebas-de-rendimiento-en-el-vps-con-datos-reales).
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/verificar_despliegue.py --base https://<dominio> --informe informe.md
+```
+
+Sale con código 1 si algún chequeo falla. `--sin-local` omite la comparación con la API local.
