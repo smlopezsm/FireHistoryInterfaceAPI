@@ -1,6 +1,6 @@
 """Resolución de la zona de consulta a un conjunto de celdas (docs/03 §Convenciones).
 
-- `provincia_id`: las celdas asignadas a la provincia en `dim_celdas` (mayor fracción de área),
+- `provincia_id` y `region`: las celdas asignadas en `dim_celdas` (mayor fracción de área),
   igual que en `conteos_celda_dia`.
 - `bbox` y `geometria`: las celdas cuyo **centroide** cae dentro de la zona.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 import shapely
 from shapely.geometry import MultiPolygon, Polygon, shape
@@ -52,7 +52,7 @@ class ZonaResuelta:
 
 
 def zona_invalida(
-    mensaje: str = "Indicá una sola zona: provincia_id, bbox o geometria.",
+    mensaje: str = "Indicá una sola zona: provincia_id, region, bbox o geometria.",
 ) -> ApiError:
     return ApiError(400, "ZONA_INVALIDA", mensaje)
 
@@ -63,12 +63,16 @@ def geometria_invalida(mensaje: str, detalle: Any = None) -> ApiError:
 
 def resolver_zona(datos: Datos, pedido: PedidoZona) -> ZonaResuelta:
     indicadas = [
-        v for v in (pedido.provincia_id, pedido.bbox, pedido.geometria) if v not in (None, "")
+        v
+        for v in (pedido.provincia_id, pedido.region, pedido.bbox, pedido.geometria)
+        if v not in (None, "")
     ]
     if len(indicadas) != 1:
         raise zona_invalida()
     if pedido.provincia_id:
         return _por_provincia(datos, pedido.provincia_id)
+    if pedido.region:
+        return _por_region(datos, pedido.region)
     if pedido.bbox:
         return _por_bbox(datos, parsear_bbox(pedido.bbox))
     assert pedido.geometria is not None
@@ -138,23 +142,53 @@ def _contar_vertices(geom: Polygon | MultiPolygon) -> int:
     return total
 
 
-def _por_provincia(datos: Datos, provincia_id: str) -> ZonaResuelta:
-    filas = datos.consultar(
-        "SELECT bbox FROM dim_provincias WHERE provincia_id = ?", [provincia_id]
-    )
+def _por_grupo(
+    datos: Datos,
+    tipo: Literal["provincia", "region"],
+    columna: Literal["provincia_id", "region"],
+    valor: str,
+    codigo_error: str,
+    mensaje_error: str,
+) -> ZonaResuelta:
+    """Resuelve celdas y bbox envolvente a partir de una columna de agrupación."""
+    filas = datos.consultar(f"SELECT bbox FROM dim_provincias WHERE {columna} = ?", [valor])
     if not filas:
-        raise ApiError(
-            404,
-            "PROVINCIA_NO_ENCONTRADA",
-            f"No existe la provincia {provincia_id!r}.",
-        )
-    columnas = datos.consultar_columnas(
-        "SELECT cell_id, provincia_id, frac_dentro FROM dim_celdas "
-        "WHERE provincia_id = ? ORDER BY cell_id",
-        [provincia_id],
+        raise ApiError(404, codigo_error, mensaje_error)
+    cajas = [[float(v) for v in str(f["bbox"]).split(",")] for f in filas]
+    bbox = (
+        min(c[0] for c in cajas),
+        min(c[1] for c in cajas),
+        max(c[2] for c in cajas),
+        max(c[3] for c in cajas),
     )
-    bbox = tuple(float(v) for v in str(filas[0]["bbox"]).split(","))
-    return _armar("provincia", provincia_id, bbox, columnas)  # type: ignore[arg-type]
+    columnas = datos.consultar_columnas(
+        f"SELECT cell_id, provincia_id, frac_dentro FROM dim_celdas "
+        f"WHERE {columna} = ? ORDER BY cell_id",
+        [valor],
+    )
+    return _armar(tipo, valor, bbox, columnas)
+
+
+def _por_provincia(datos: Datos, provincia_id: str) -> ZonaResuelta:
+    return _por_grupo(
+        datos,
+        "provincia",
+        "provincia_id",
+        provincia_id,
+        "PROVINCIA_NO_ENCONTRADA",
+        f"No existe la provincia {provincia_id!r}.",
+    )
+
+
+def _por_region(datos: Datos, region: str) -> ZonaResuelta:
+    return _por_grupo(
+        datos,
+        "region",
+        "region",
+        region,
+        "REGION_NO_ENCONTRADA",
+        f"No existe la región {region!r}.",
+    )
 
 
 def _por_bbox(datos: Datos, bbox: tuple[float, float, float, float]) -> ZonaResuelta:

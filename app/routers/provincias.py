@@ -29,11 +29,18 @@ def listar_provincias(
     geometria: Annotated[
         bool, Query(description="Incluir el polígono simplificado de cada provincia.")
     ] = False,
+    region: Annotated[
+        str | None,
+        Query(description="Filtrar por región (`NOA`, `NEA`, `Pampeana`, `Cuyo`, `Patagonia`)."),
+    ] = None,
 ) -> list[Provincia]:
     columna_geom = "geom_geojson" if geometria else "NULL AS geom_geojson"
+    filtro = "WHERE region = ?" if region is not None else ""
+    parametros = [region] if region is not None else None
     filas = datos.consultar(
         f"SELECT provincia_id, nombre, region, bbox, {columna_geom} "
-        "FROM dim_provincias ORDER BY provincia_id"
+        f"FROM dim_provincias {filtro} ORDER BY provincia_id",
+        parametros,
     )
     return [
         Provincia(

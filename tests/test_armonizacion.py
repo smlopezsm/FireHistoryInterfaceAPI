@@ -135,3 +135,22 @@ def test_referencia_viirs_invalida_deja_degradado(tmp_path, hacer_cliente):
     (destino / "metadata.json").write_text(json.dumps(meta))
     cliente = hacer_cliente(data_dir=destino)
     assert cliente.get("/api/v1/health").json()["estado"] == "degradado"
+
+
+def test_calendario_y_serie_por_region(cliente):
+    cal = cliente.get(
+        "/api/v1/calendario",
+        params={"region": "R1", "desde": "2006-08", "hasta": "2006-08"},
+    )
+    assert cal.status_code == 200, cal.text
+    assert cal.json()["zona"]["tipo"] == "region"
+    assert cal.json()["zona"]["id"] == "R1"
+    assert cal.json()["meses"][0]["armonizado"] == 30
+
+    serie = cliente.post(
+        "/api/v1/serie",
+        json={"region": "R2", "desde": "2011-05", "hasta": "2011-05"},
+    )
+    assert serie.status_code == 200, serie.text
+    assert serie.json()["zona"]["tipo"] == "region"
+    assert serie.json()["puntos"][0]["armonizado"] == 14
