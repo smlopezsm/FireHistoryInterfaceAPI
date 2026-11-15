@@ -10,6 +10,7 @@ from fastapi import APIRouter, Query
 from app.deps import DatosListosDep
 from app.schemas.errores import ErrorRespuesta
 from app.schemas.provincias import Provincia
+from app.services.zonas import bbox_provincia
 
 router = APIRouter(tags=["zonas"])
 
@@ -47,7 +48,7 @@ def listar_provincias(
             provincia_id=f["provincia_id"],
             nombre=f["nombre"],
             region=f["region"],
-            bbox=[float(v) for v in f["bbox"].split(",")],
+            bbox=bbox_provincia(f["bbox"]),
             geometria=orjson.loads(f["geom_geojson"]) if f["geom_geojson"] else None,
         )
         for f in filas

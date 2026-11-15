@@ -1,6 +1,5 @@
 """Consultas de celdas y puntos industriales para el mapa."""
 
-from datetime import date
 from typing import Any
 
 import orjson
@@ -9,6 +8,7 @@ from app.db import Datos
 from app.errores import ApiError, datos_no_disponibles
 from app.schemas.armonizacion import Capa
 from app.services.armonizacion import CONTEOS_SQL, cobertura_sql
+from app.services.periodos import periodo_diario
 from app.services.zonas import parsear_bbox
 
 CELDAS_SQL = f"""
@@ -65,31 +65,11 @@ FROM filtradas f JOIN dim_celdas d ON d.cell_id = f.cell_id ORDER BY f.cell_id
 """
 
 
-def _periodo(datos: Datos, desde: str, hasta: str) -> tuple[date, date]:
-    metadata = datos.metadata
-    if metadata is None:
-        raise datos_no_disponibles()
-    try:
-        inicio, fin = date.fromisoformat(desde), date.fromisoformat(hasta)
-        if (
-            desde != inicio.isoformat()
-            or hasta != fin.isoformat()
-            or not metadata.fecha_min <= inicio <= fin <= metadata.fecha_max
-            or (fin - inicio).days >= 366
-        ):
-            raise ValueError
-    except ValueError:
-        raise ApiError(
-            400, "PERIODO_INVALIDO", "Indicá un período disponible de hasta 366 días (YYYY-MM-DD)."
-        ) from None
-    return inicio, fin
-
-
 def celdas(
     datos: Datos, bbox: str, desde: str, hasta: str, capa: Capa, min_focos: float, maximo: int
 ) -> dict[str, Any]:
     oeste, sur, este, norte = parsear_bbox(bbox)
-    inicio, fin = _periodo(datos, desde, hasta)
+    inicio, fin = periodo_diario(datos, desde, hasta, max_dias=366)
     assert datos.metadata is not None
     filas = datos.consultar(
         cobertura_sql(datos.metadata.referencia_viirs) + CELDAS_SQL,

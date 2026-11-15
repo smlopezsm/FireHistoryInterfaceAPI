@@ -97,6 +97,11 @@ def parsear_bbox(texto: str) -> tuple[float, float, float, float]:
     return oeste, sur, este, norte
 
 
+def bbox_provincia(texto: str) -> list[float]:
+    """`bbox` de `dim_provincias` (texto `oeste,sur,este,norte`) como lista de 4 números."""
+    return [float(v) for v in texto.split(",")]
+
+
 def _bbox_invalido(motivo: str) -> ApiError:
     return ApiError(
         422,
@@ -154,7 +159,7 @@ def _por_grupo(
     filas = datos.consultar(f"SELECT bbox FROM dim_provincias WHERE {columna} = ?", [valor])
     if not filas:
         raise ApiError(404, codigo_error, mensaje_error)
-    cajas = [[float(v) for v in str(f["bbox"]).split(",")] for f in filas]
+    cajas = [bbox_provincia(str(f["bbox"])) for f in filas]
     bbox = (
         min(c[0] for c in cajas),
         min(c[1] for c in cajas),
