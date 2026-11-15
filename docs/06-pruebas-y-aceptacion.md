@@ -65,9 +65,9 @@ Se recalcula sobre los datos reales y se compara con los resultados de la Propue
 
 ## 6. Criterios de aceptación del MVP
 
-- [ ] Los 11 endpoints responden según este contrato.
-- [ ] Las pruebas U1–U10 y C1–C7 pasan en CI.
+- [x] Todos los endpoints de [03](03-contratos-api.md) responden según el contrato (prueba C1 en todos los endpoints).
+- [x] Las pruebas U1–U10 y C1–C7 pasan en CI.
 - [ ] R1, R2 y R5 cumplen en el VPS.
 - [ ] S1–S4 cumplen con los datos de producción.
 - [ ] La imagen cumple los límites de tamaño de [05 §1](05-despliegue.md#1-imagen-docker) (los mide el CI) y se despliega por webhook en menos de 1 minuto.
-- [ ] `/docs` (Swagger) accesible y con descripciones en español.
+- [x] `/docs` (Swagger) accesible y con descripciones en español (prueba `test_openapi_en_espanol`).

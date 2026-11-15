@@ -44,15 +44,12 @@ El sistema tiene **tres piezas**, cada una en su propio repositorio:
 
 > El detalle de cada archivo está en [02-contratos-de-datos.md](02-contratos-de-datos.md).
 
-## 3. Diferencias con el informe de infraestructura original
+## 3. Decisiones de base
 
-| Tema | Informe original | Esta arquitectura | Motivo |
-|---|---|---|---|
-| Modelo de IA en el servidor | LightGBM Hurdle `.pkl` cargado en FastAPI | **No hay modelo**; tablas de factores | La Propuesta B armoniza con factores provincia × mes |
-| Alcance | San Luis, ~3.070 celdas, 2000–2024 | **Argentina**, ~111.000 celdas, 2000 → hoy | Decisión del equipo (14/11/2026) |
-| Proyección | "EPSG:5347 POSGAR Albers" | **Albers custom** (`+proj=aea +lat_0=-37 +lon_0=-60 +lat_1=-26 +lat_2=-48 +x_0=2500000 +y_0=0 +ellps=GRS80`) | EPSG:5347 es Gauss-Krüger faja 5, no Albers |
-| Actualización de datos | Carga única | **Job programado** (diario o semanal) que regenera los Parquet | El calendario debe llegar hasta hoy |
-| Disco | 20–50 GB | **40–50 GB** | SO + imágenes + 4 GB de swap + datos con margen |
+- **Sin modelo de IA en el servidor:** la armonización usa tablas de factores provincia × mes (no el LightGBM del informe de infraestructura original).
+- **Alcance:** toda Argentina, de 2000-11 a hoy (la cantidad de celdas está en `celdas_total` de `/metadata`).
+- **Proyección de la grilla:** Albers custom `+proj=aea +lat_0=-37 +lon_0=-60 +lat_1=-26 +lat_2=-48 +x_0=2500000 +y_0=0 +ellps=GRS80`. El informe original citaba EPSG:5347, que es Gauss-Krüger faja 5 y no Albers.
+- **Disco del VPS:** 40–50 GB (SO, imágenes, 4 GB de swap y margen).
 
 ## 4. Presupuesto de memoria (4.096 MB)
 

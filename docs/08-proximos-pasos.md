@@ -6,7 +6,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-15**.
 
 | Feature | PR | Qué quedó |
 |---|---|---|
-| F1 · Esqueleto | #2 | FastAPI, configuración por entorno, DuckDB de solo lectura por worker, `/health`, `/metadata`, errores, CORS, ETag, Dockerfile (141 MB), CI |
+| F1 · Esqueleto | #2 | FastAPI, configuración por entorno, DuckDB de solo lectura por worker, `/health`, `/metadata`, errores, CORS, ETag, Dockerfile, CI |
 | Docs · factores de respaldo | #3 | `factores_region_mes.parquet` en [02 §5.1](02-contratos-de-datos.md) |
 | F2 · Zonas | #4 → #5 | `/provincias`, resolución de zona (provincia, bbox, polígono), límite de 256 KB en los POST |
 | Docs · traspaso | #6 | Decisiones de F3–F7, este documento y `CLAUDE.md` |
@@ -15,7 +15,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-15**.
 | F5 · Mapa | #9 | `/mapa/celdas` y `/mapa/industriales` |
 | F6 · Descargas | #10 | `focos.csv` y `calendario.csv` |
 | F7 · Recarga | #11 | `POST /admin/reload` y detección automática del cambio de `current` |
-| Revisión F3–F7 | #12 | Correcciones de la revisión (ver §4) |
+| Revisión F3–F7 | #12 | Correcciones de la revisión de F3–F7 (detalle en el PR) |
 | Datos en la imagen | #14 | Versión del pipeline en `data/current/`, copiada dentro de la imagen |
 | Veredicto · docs | #15 | Rangos publicados y validación científica en docs/02 y docs/04 §8 |
 | Caché | #16 | `ETag` por ruta y query canonizados |
@@ -25,7 +25,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-15**.
 | Confianza H9/H13 | #20 | `dias_sin_modis` y factores no provinciales |
 | Anomalía y confianza H1/H15 | #21 | Anomalía por era (`referencia`) y `media` por ancho del rango |
 
-**Los 11 endpoints de [03](03-contratos-api.md) existen.** U1–U10 y C1–C7 tienen pruebas y pasan en CI.
+**Todos los endpoints de [03](03-contratos-api.md) existen.** U1–U10 y C1–C7 tienen pruebas y pasan en CI.
 
 ## 2. Reglas de trabajo
 
@@ -48,19 +48,9 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-15**.
 | Confianza en provincias con "pocos datos" | Los meses con `frac_estimada ≤ 0,1` son `alta` en cualquier zona; "pocos datos" solo baja lo estimado | 04 §5 |
 | Datos de producción | Versión del pipeline copiada en `data/current/` y empaquetada en la imagen (sin volumen en el VPS) | 05 |
 | `satelite_operativo` sin fila para un día | Ese día cuenta como **no operativo** | 04 (código) |
+| Celdas de la zona hacia DuckDB | Tabla Arrow `zona_celdas` registrada en el cursor, no una lista parametrizada (calendario nacional de 8,0 s a 0,3 s) | `app/db.py` |
 
-## 4. Revisión de F3–F7 (correcciones de este PR)
-
-- **Anomalía:** el histórico incluía el mes en curso (incompleto); ahora se excluye.
-- **Referencia VIIRS:** las fechas de S-NPP → NOAA-20 estaban fijas en el SQL; ahora salen de `metadata.json`.
-- **Swagger:** las 13 operaciones de F3–F7 tenían solo `summary`; ahora tienen descripción, y los campos de respuesta también. `/mapa/*` declara su esquema GeoJSON.
-- **CSV de focos:** `lat`/`lon` se redondean a 5 decimales y `frp_mw` a 2 (antes salía el ruido de los FLOAT de 32 bits).
-- **Documentación:** errores `TOKEN_REQUERIDO` (401) y `TOKEN_INVALIDO` (403) en la tabla de 03.
-- **Confianza:** los meses observados ya no quedan en `baja` por estar en provincias con "pocos datos".
-- **Rendimiento:** las celdas de la zona viajan a DuckDB como tabla Arrow registrada en el cursor (`zona_celdas`) y no como lista parametrizada. Con los datos reales del pipeline (versión `20261114T171326`, medido en una Mac): calendario de Argentina de 8,0 s a 0,3 s; de una provincia, de 285 a 97 ms; `focos.csv` de un año, de 540 a 76 ms.
-- **Pruebas nuevas:** confianza (reglas y provincias "pocos datos"), C1 completo (respuestas y OpenAPI) y C7 en todos los endpoints de datos.
-
-## 5. Pendientes
+## 4. Pendientes
 
 ### Fuera de este repo
 
@@ -81,7 +71,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-15**.
 - **Riesgo de saturación para monitoreo y endpoints sin I/O:** si ráfagas de consultas lentas ocupan todos los hilos del pool (hasta `query_timeout_s = 10` s esperando el semáforo o ejecutando), cualquier ruta ligera declarada como `def` —o que dependa de `Depends()` síncronos— queda en cola detrás de ellas y puede hacer fallar el `HEALTHCHECK` de Docker (`--timeout=5s`, `timeout=4` s).
 - **Regla de mantenimiento:** los endpoints que solo leen estado en memoria (`GET /api/v1/health`, `GET /api/v1/metadata`) y sus dependencias compartidas (`obtener_datos`, `datos_listos`) deben mantenerse como `async def` para responder directo en el *event loop*, preservando la fijación de versión por `ContextVar` en `CacheMiddleware`.
 
-## 6. Entorno local
+## 5. Entorno local
 
 - Instalación, datos demo y cómo levantar la API: [README §Inicio rápido](../README.md#inicio-rápido-local).
 - Los valores esperados de U1–U9 sobre los fixtures están anotados en `scripts/make_fixtures.py` (`CASOS`) y verificados en `tests/test_armonizacion.py`.
