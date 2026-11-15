@@ -29,7 +29,7 @@ El sistema tiene **tres piezas**, cada una en su propio repositorio:
 │  └─────────────────────────────┘   └──────────────┬────────────┘ │
 │                                                   │ solo lectura │
 │  ┌────────────────────────────────────────────────▼────────────┐ │
-│  │ Volumen /var/data  (versión activa → symlink "current")     │ │
+│  │ Dentro de la imagen: /var/data/current (data/current/ repo) │ │
 │  │  ├── focos/anio=YYYY/*.parquet        detecciones limpias    │ │
 │  │  ├── conteos_celda_dia/anio=YYYY/*.parquet                   │ │
 │  │  ├── dim_celdas.parquet · dim_provincias.parquet             │ │
@@ -70,20 +70,21 @@ El sistema tiene **tres piezas**, cada una en su propio repositorio:
 
 ## 5. Flujo de actualización de datos
 
+Los datos viajan **dentro de la imagen** (decisión del 2026-11-14):
+
 ```text
-[GitHub Actions · cron diario 06:00 ART]  (repo ml_nasaspaceapp)
-   1. Descarga NRT de FIRMS (API area, MAP_KEY en secrets) de los últimos días
-   2. Limpieza + exclusión de puntos industriales + bandera de satélite operativo
-   3. Actualiza focos/ y conteos_celda_dia/ del año en curso
-   4. Valida (esquemas, conteos > 0, fechas) → genera metadata.json con data_version
-   5. Sube el paquete al VPS (rsync por SSH) en /var/data/releases/<data_version>/
-   6. Cambia el symlink /var/data/current → nueva versión (cambio atómico)
-   7. Llama POST /api/v1/admin/reload (token) → el worker que lo recibe reabre DuckDB;
-      el otro detecta el cambio del symlink en pocos segundos
+[pipeline ML_NasaSpaceApp]  genera serving_api/<versión>/ y lo valida
+   │
+   ▼
+PR en este repo que reemplaza data/current/
+   │  CI: pruebas + imagen + /health con el data_version de data/current/metadata.json
+   ▼
+merge a main ─► imagen nueva en GHCR ─► Dokploy la despliega
 ```
 
-- **El histórico (2000 → último SP)** se regenera solo cuando cambian los factores o la lista de puntos industriales (acción manual).
-- **Se guardan las 3 últimas versiones** en `releases/` para poder volver atrás.
+El paso a paso está en [05 §5 bis](05-despliegue.md#5-bis-actualizar-los-datos). Para volver a una versión anterior de los datos se despliega la imagen `:<sha>` anterior.
+
+`POST /api/v1/admin/reload` y la revisión de `current` cada 5 s siguen en el código, pero solo actúan si alguien monta otra carpeta de datos a propósito.
 
 ## 6. CI/CD de la aplicación
 
@@ -100,8 +101,8 @@ Regla: **nada se compila en el VPS** (ni `pip install` ni `npm run build`).
 |---|---|
 | Firewall (UFW) | Solo 22, 80 y 443 |
 | SSH | Solo con clave pública; sin login de root por contraseña |
-| Datos | Volumen montado **read-only** en el contenedor de la API |
-| Secretos | `MAP_KEY` de FIRMS, token de recarga y SSH de despliegue en *GitHub Secrets* |
+| Datos | Dentro de la imagen, copiados como root: el usuario `app` solo puede leerlos |
+| Secretos | `MAP_KEY` de FIRMS en el pipeline. En este repo, `DOKPLOY_WEBHOOK_URL` en *GitHub Secrets*. `RELOAD_TOKEN` y `CORS_ORIGINS` como variables de entorno en Dokploy |
 | Límites | Contenedor API 1,5 GB / frontend 256 MB; tiempo máximo por consulta 10 s |
 | Swap | 4 GB, `vm.swappiness=10` |
-| Backups | `releases/` versionadas + artefacto del pipeline en GitHub (Release) |
+| Backups | Cada imagen `:<sha>` de GHCR trae su versión de datos; el historial de `data/current/` está en git |

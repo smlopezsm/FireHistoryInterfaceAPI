@@ -245,6 +245,8 @@ Formato único:
 | 403 | `TOKEN_INVALIDO` | `POST /admin/reload` con un token incorrecto |
 | 404 | `PROVINCIA_NO_ENCONTRADA` | `provincia_id` inexistente |
 | 404 | `REGION_NO_ENCONTRADA` | `region` inexistente |
+| 404 | `RUTA_NO_ENCONTRADA` | La ruta pedida no existe |
+| 405 | `METODO_NO_PERMITIDO` | El método HTTP no está permitido en esa ruta |
 | 413 | `RESULTADO_DEMASIADO_GRANDE` | Se superan los límites de celdas o de filas |
 | 413 | `CUERPO_DEMASIADO_GRANDE` | El body de un `POST` supera los 256 KB |
 | 422 | `PARAMETRO_INVALIDO` | Error de validación (FastAPI), incluido un `bbox` mal formado |

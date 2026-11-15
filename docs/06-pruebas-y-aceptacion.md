@@ -69,5 +69,5 @@ Se recalcula sobre los datos reales y se compara con los resultados de la Propue
 - [ ] Las pruebas U1–U10 y C1–C7 pasan en CI.
 - [ ] R1, R2 y R5 cumplen en el VPS.
 - [ ] S1–S4 cumplen con los datos de producción.
-- [ ] La imagen Docker pesa menos de 250 MB y se despliega por webhook en menos de 1 minuto.
+- [ ] La imagen cumple los límites de tamaño de [05 §1](05-despliegue.md#1-imagen-docker) (los mide el CI) y se despliega por webhook en menos de 1 minuto.
 - [ ] `/docs` (Swagger) accesible y con descripciones en español.
