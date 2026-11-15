@@ -117,9 +117,7 @@ endpoints de datos devuelven `503 DATOS_NO_DISPONIBLES`.
 
 ## Datos de producción
 
-La versión publicada por el pipeline está en **`data/current/`** y **se copia dentro de la imagen Docker** (no hace falta montar nada en el VPS).
-
-Para actualizarla: reemplazá `data/current/` por la carpeta `serving_api/<versión>/` de [`ML_NasaSpaceApp`](https://github.com/DenisPablo/ML_NasaSpaceApp) y abrí un PR. Al mergear, el CI publica la imagen y Dokploy la despliega. Ver [despliegue](docs/05-despliegue.md#5-bis-actualizar-los-datos).
+La versión publicada por el pipeline está en **`data/current/`** y **se copia dentro de la imagen Docker** (no hace falta montar nada en el VPS). Cómo actualizarla: [docs/05 §5 bis](docs/05-despliegue.md#5-bis-actualizar-los-datos).
 
 Para levantar la API local con esos datos: `DATA_DIR=data/current CORS_ORIGINS=http://localhost:5173 RELOAD_TOKEN=dev .venv/bin/uvicorn app.main:app`.
 

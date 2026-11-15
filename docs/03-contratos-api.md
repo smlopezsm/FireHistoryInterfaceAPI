@@ -112,7 +112,7 @@ Matriz **mes × año** para la zona elegida. Es el endpoint central.
 | `maximo` | number | No | Límite superior del rango del 80 % |
 | `estado` | enum | No | `observado`, `estimado` o `mixto` |
 | `frac_estimada` | number | No | Fracción de días del mes que se estimaron (0–1) |
-| `dias_sin_modis` | integer | No | Días estimados en los que no operó el MODIS necesario (Terra; Terra + Aqua desde 2002-07-04). Esos días no aportan focos: el `maximo` se ensancha y, si superan el 10 % de los días estimados, la confianza es `baja` (ver [04](04-logica-de-armonizacion.md#4-rango-del-80-)) |
+| `dias_sin_modis` | integer | No | Días estimados en los que no operó el MODIS necesario (Terra; Terra + Aqua desde 2002-07-04). No aportan focos; cómo afectan al `maximo` y a la `confianza`: [04 §4](04-logica-de-armonizacion.md#4-rango-del-80-) y [§5](04-logica-de-armonizacion.md#5-confianza) |
 | `confianza` | enum | No | `alta`, `media` o `baja` (ver [04](04-logica-de-armonizacion.md#5-confianza)) |
 | `parcial` | boolean | No | `true` si es el mes en curso (todavía incompleto) |
 
