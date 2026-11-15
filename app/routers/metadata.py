@@ -22,7 +22,7 @@ router = APIRouter(tags=["estado"])
     ),
     responses={503: {"model": ErrorRespuesta, "description": "Datos no disponibles."}},
 )
-def metadata(datos: DatosListosDep) -> Metadata:
+async def metadata(datos: DatosListosDep) -> Metadata:
     assert datos.metadata is not None
     return Metadata(
         **datos.metadata.model_dump(),

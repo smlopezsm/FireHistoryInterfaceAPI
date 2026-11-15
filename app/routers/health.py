@@ -20,7 +20,7 @@ router = APIRouter(tags=["estado"])
         "Lo usan Dokploy y el monitoreo."
     ),
 )
-def health(datos: DatosDep) -> Health:
+async def health(datos: DatosDep) -> Health:
     meta = datos.metadata if datos.listo else None
     return Health(
         estado="ok" if meta else "degradado",
