@@ -59,11 +59,16 @@ def _error(datos: Datos, **pedido: Any) -> ApiError:
 def test_sin_zona(datos: Datos) -> None:
     e = _error(datos)
     assert (e.status, e.codigo) == (400, "ZONA_INVALIDA")
-    assert e.mensaje == "Indicá una sola zona: provincia_id, bbox o geometria."
+    assert e.mensaje == "Indicá una sola zona: provincia_id, region, bbox o geometria."
 
 
 def test_dos_zonas(datos: Datos) -> None:
     e = _error(datos, provincia_id="P1", bbox="-67,-34,-65,-32")
+    assert (e.status, e.codigo) == (400, "ZONA_INVALIDA")
+
+
+def test_provincia_y_region_juntas(datos: Datos) -> None:
+    e = _error(datos, provincia_id="P1", region="R1")
     assert (e.status, e.codigo) == (400, "ZONA_INVALIDA")
 
 
@@ -83,6 +88,24 @@ def test_provincia(datos: Datos) -> None:
 def test_provincia_inexistente(datos: Datos) -> None:
     e = _error(datos, provincia_id="99")
     assert (e.status, e.codigo) == (404, "PROVINCIA_NO_ENCONTRADA")
+
+
+# --- región -------------------------------------------------------------------------------
+
+
+def test_region(datos: Datos) -> None:
+    z = resolver_zona(datos, PedidoZona(region="R1"))
+    assert len(z.celdas_ids) == 10
+    assert z.area_km2 == pytest.approx(250.0)
+    assert set(z.provincias) == {"P1"}
+    r = z.respuesta()
+    assert (r.tipo, r.id, r.celdas, r.area_km2) == ("region", "R1", 10, 250.0)
+    assert r.bbox is not None and len(r.bbox) == 4
+
+
+def test_region_inexistente(datos: Datos) -> None:
+    e = _error(datos, region="NO_EXISTE")
+    assert (e.status, e.codigo) == (404, "REGION_NO_ENCONTRADA")
 
 
 # --- bbox ---------------------------------------------------------------------------------
@@ -219,6 +242,24 @@ def test_http_get_provincia(cliente_zona: TestClient) -> None:
     r = cliente_zona.get("/api/v1/_zona", params={"provincia_id": "P1"})
     assert r.status_code == 200
     assert r.json()["celdas"] == 10
+
+
+def test_http_get_y_post_region(cliente_zona: TestClient) -> None:
+    r_get = cliente_zona.get("/api/v1/_zona", params={"region": "R2"})
+    assert r_get.status_code == 200
+    assert (r_get.json()["tipo"], r_get.json()["id"], r_get.json()["celdas"]) == (
+        "region",
+        "R2",
+        10,
+    )
+
+    r_post = cliente_zona.post("/api/v1/_zona", json={"region": "R1"})
+    assert r_post.status_code == 200
+    assert (r_post.json()["tipo"], r_post.json()["id"], r_post.json()["celdas"]) == (
+        "region",
+        "R1",
+        10,
+    )
 
 
 def test_http_get_sin_zona(cliente_zona: TestClient) -> None:

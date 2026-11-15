@@ -8,7 +8,7 @@ from fastapi import Depends, Query, Request
 
 from app.db import Datos
 from app.errores import datos_no_disponibles
-from app.schemas.zonas import DESC_BBOX, DESC_PROVINCIA, PedidoZona
+from app.schemas.zonas import DESC_BBOX, DESC_PROVINCIA, DESC_REGION, PedidoZona
 
 
 def obtener_datos(request: Request) -> Datos:
@@ -29,12 +29,13 @@ DatosListosDep = Annotated[Datos, Depends(datos_listos)]
 
 def zona_desde_query(
     provincia_id: Annotated[str | None, Query(description=DESC_PROVINCIA, examples=["74"])] = None,
+    region: Annotated[str | None, Query(description=DESC_REGION, examples=["Cuyo"])] = None,
     bbox: Annotated[
         str | None, Query(description=DESC_BBOX, examples=["-67.4,-36.0,-64.9,-31.8"])
     ] = None,
 ) -> PedidoZona:
     """Zona para los endpoints GET (el polígono solo se acepta por POST)."""
-    return PedidoZona(provincia_id=provincia_id, bbox=bbox)
+    return PedidoZona(provincia_id=provincia_id, region=region, bbox=bbox)
 
 
 ZonaQueryDep = Annotated[PedidoZona, Depends(zona_desde_query)]

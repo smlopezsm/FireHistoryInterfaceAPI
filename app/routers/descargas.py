@@ -60,10 +60,10 @@ class PedidoFocos(PedidoZona):
 
 
 def _nombre(zona: ZonaResuelta) -> str:
-    if zona.tipo == "provincia":
+    if zona.tipo in ("provincia", "region"):
         codigo = zona.id or ""
         seguro = "".join(c for c in codigo if c.isascii() and c.isalnum())
-        return f"provincia-{seguro}"
+        return f"{zona.tipo}-{seguro}"
     return zona.tipo
 
 

@@ -35,3 +35,13 @@ def test_provincias_parametro_invalido(cliente: TestClient) -> None:
 def test_provincias_sin_datos(cliente_sin_datos: TestClient) -> None:
     r = cliente_sin_datos.get("/api/v1/provincias")
     assert r.status_code == 503
+
+
+def test_provincias_filtro_region(cliente: TestClient) -> None:
+    r = cliente.get("/api/v1/provincias", params={"region": "R2"})
+    assert r.status_code == 200
+    assert [p["provincia_id"] for p in r.json()] == ["P2"]
+
+    vacia = cliente.get("/api/v1/provincias", params={"region": "NO_EXISTE"})
+    assert vacia.status_code == 200
+    assert vacia.json() == []

@@ -37,8 +37,8 @@ ETIQUETAS = [
         "name": "zonas",
         "description": (
             "Provincias y zonas de consulta. Toda consulta usa **una sola** zona: "
-            "`provincia_id`, `bbox` o un polígono GeoJSON (solo por POST). Entran las celdas "
-            "de 5 × 5 km cuyo centroide cae dentro de la zona."
+            "`provincia_id`, `region`, `bbox` o un polígono GeoJSON (solo por POST). Entran las "
+            "celdas de 5 × 5 km asignadas a la zona o cuyo centroide cae dentro."
         ),
     },
 ]

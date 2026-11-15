@@ -7,10 +7,10 @@
 | Tema | Regla |
 |---|---|
 | Fechas | `YYYY-MM-DD` (día) o `YYYY-MM` (mes), en hora local de Argentina |
-| Zona de consulta | **Una sola** de: `provincia_id`, `bbox` o un polígono GeoJSON (solo en `POST`) |
+| Zona de consulta | **Una sola** de: `provincia_id`, `region`, `bbox` o un polígono GeoJSON (solo en `POST`) |
 | `bbox` | `oeste,sur,este,norte` en EPSG:4326, por ejemplo `-67.4,-36.0,-64.9,-31.8` |
 | Polígono | GeoJSON `Polygon` o `MultiPolygon` en EPSG:4326, hasta 2.000 vértices |
-| Celdas de una zona | Con `bbox` o polígono, entran las celdas cuyo **centroide** cae dentro de la zona. Con `provincia_id`, las celdas que `dim_celdas` asigna a esa provincia (mayor fracción de área), igual que en `conteos_celda_dia` |
+| Celdas de una zona | Con `bbox` o polígono, entran las celdas cuyo **centroide** cae dentro de la zona. Con `provincia_id` o `region`, las celdas que `dim_celdas` asigna a esa unidad (mayor fracción de área), igual que en `conteos_celda_dia` |
 | Números | Conteos como enteros; armonizados con 1 decimal |
 | Nulos | `null` significa "**no hay dato**" (por ejemplo VIIRS antes de 2012), **nunca** cero |
 | Caché | `Cache-Control: public, max-age=3600` y `ETag = data_version` |
@@ -59,6 +59,7 @@ Devuelve el contenido de `metadata.json` (ver [02](02-contratos-de-datos.md#9-me
 | Parámetro | Tipo | Default | Descripción |
 |---|---|---|---|
 | `geometria` | boolean | `false` | Incluir el polígono simplificado |
+| `region` | string | — | Filtrar provincias por región (`NOA`, `NEA`, `Pampeana`, `Cuyo`, `Patagonia`) |
 
 **Respuesta 200:** lista de objetos.
 
@@ -80,9 +81,10 @@ Matriz **mes × año** para la zona elegida. Es el endpoint central.
 
 | Parámetro | Tipo | Obligatorio | Default | Descripción |
 |---|---|---|---|---|
-| `provincia_id` | string | Uno de los tres | — | Código INDEC |
-| `bbox` | string | Uno de los tres | — | `oeste,sur,este,norte` |
-| `geometria` | GeoJSON | Uno de los tres (solo POST) | — | Polígono dibujado por el usuario |
+| `provincia_id` | string | Una de las cuatro | — | Código INDEC |
+| `region` | string | Una de las cuatro | — | Nombre de región (`NOA`, `NEA`, `Pampeana`, `Cuyo`, `Patagonia`) |
+| `bbox` | string | Una de las cuatro | — | `oeste,sur,este,norte` |
+| `geometria` | GeoJSON | Una de las cuatro (solo POST) | — | Polígono dibujado por el usuario |
 | `desde` | `YYYY-MM` | No | `2000-11` | Primer mes |
 | `hasta` | `YYYY-MM` | No | último mes con datos | Último mes |
 | `capa` | enum | No | `armonizado` | `armonizado`, `modis`, `viirs`. Cada mes trae **siempre** todos los campos; la capa solo cambia `unidad` y el cálculo de `resumen` (en `viirs`, los meses con `viirs = null` no cuentan) |
@@ -229,7 +231,7 @@ y el percentil.
 Formato único:
 
 ```json
-{"error": {"codigo": "ZONA_INVALIDA", "mensaje": "Indicá una sola zona: provincia_id, bbox o geometria.", "detalle": null}}
+{"error": {"codigo": "ZONA_INVALIDA", "mensaje": "Indicá una sola zona: provincia_id, region, bbox o geometria.", "detalle": null}}
 ```
 
 | HTTP | `codigo` | Cuándo |
@@ -240,6 +242,7 @@ Formato único:
 | 401 | `TOKEN_REQUERIDO` | `POST /admin/reload` sin credencial Bearer |
 | 403 | `TOKEN_INVALIDO` | `POST /admin/reload` con un token incorrecto |
 | 404 | `PROVINCIA_NO_ENCONTRADA` | `provincia_id` inexistente |
+| 404 | `REGION_NO_ENCONTRADA` | `region` inexistente |
 | 413 | `RESULTADO_DEMASIADO_GRANDE` | Se superan los límites de celdas o de filas |
 | 413 | `CUERPO_DEMASIADO_GRANDE` | El body de un `POST` supera los 256 KB |
 | 422 | `PARAMETRO_INVALIDO` | Error de validación (FastAPI), incluido un `bbox` mal formado |
