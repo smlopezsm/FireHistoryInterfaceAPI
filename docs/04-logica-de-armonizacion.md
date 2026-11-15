@@ -61,18 +61,20 @@ Sumar los límites provincia por provincia da un rango **conservador** (más anc
 | `confianza` | Condición |
 |---|---|
 | `alta` | `frac_estimada ≤ 0,1` (en cualquier zona, también en provincias con "pocos datos") |
-| `media` | Estimado con MODIS Terra + Aqua, `modis_est ≥ 21` focos en el mes y ninguna de las condiciones de `baja` |
-| `baja` | `frac_estimada > 0,1` y al menos una de estas: período solo Terra (antes de 2002-07-04); `modis_est ≤ 20`; la zona tiene más del 50 % de su área en provincias marcadas como "pocos datos" (Tierra del Fuego, Santa Cruz, CABA); `dias_sin_modis` supera el 10 % de los días estimados; o más del 50 % del estimado sale de factores con `nivel_origen` `region` o `pais` |
+| `media` | Estimado con MODIS Terra + Aqua, con un rango no más ancho que lo estimado (`maximo − minimo ≤ armonizado − viirs`, y lo estimado > 0) y ninguna de las condiciones de `baja` |
+| `baja` | `frac_estimada > 0,1` y al menos una de estas: período solo Terra (antes de 2002-07-04); el rango es más ancho que lo estimado, o lo estimado es 0; la zona tiene más del 50 % de su área en provincias marcadas como "pocos datos" (Tierra del Fuego, Santa Cruz, CABA); `dias_sin_modis` supera el 10 % de los días estimados; o más del 50 % del estimado sale de factores con `nivel_origen` `region` o `pais` |
 
 Se evalúa en orden: primero `alta`; las condiciones de `baja` solo afectan a lo **estimado**, porque un mes observado no depende de los factores ni de MODIS.
 
-Los dos últimos criterios salen del [veredicto de armonización](#8-validación-científica-y-limitaciones-conocidas):
+Los tres últimos criterios salen del [veredicto de armonización](#8-validación-científica-y-limitaciones-conocidas):
+- **Ancho del rango (antes, `modis_est ≥ 21`):** el umbral de 21 focos se aplicaba al total de la zona, así que una región con muchas provincias de pocos focos cada una quedaba en `media`. El ancho relativo sale de `rangos.parquet`: en una provincia es 0,73 en el tramo de 21–100 focos MODIS y 1,34 en el de 6–20, de modo que el límite "ancho ≤ estimado" separa en el mismo punto que antes. Con los datos `20261114T174945`, las 24 provincias y el país no cambian; en las regiones, 54 meses pasan de `media` a `baja` (35 en Patagonia y 17 en Cuyo).
 - **Días sin MODIS:** el 10 % es el mismo umbral que separa `alta`. Con los datos `20261114T174945`, 90 meses tienen algún día sin MODIS, pero en 58 son solo 1 o 2 días (muchos, probablemente cero fuego real en invierno). Con el umbral, la confianza baja en 25 meses.
 - **Factor no provincial:** dejando cada provincia afuera y usando el factor de su región, el sesgo mediano es 7,7 % (Neuquén −29,7 %). Se mide la parte del estimado (focos × factor) que usa factores `region` o `pais`, sea porque falta el de la provincia o porque el pipeline marcó el factor así (shrinkage). El umbral del 50 % sigue la misma lógica que "pocos datos".
 
 ## 6. Anomalía (mes vs. lo normal)
 
-- Se calcula sobre `armonizado` del **mismo mes calendario** en todos los años disponibles, **excluyendo** el mes evaluado.
+- Se calcula sobre `armonizado` del **mismo mes calendario**, **excluyendo** el mes evaluado y los meses incompletos.
+- **Se compara solo con años de la misma era** (`referencia`): un mes con `frac_estimada ≤ 0,1` (`observada`, VIIRS) contra los años observados; el resto (`estimada`, desde MODIS) contra los años estimados. Motivo: MODIS crudo baja un 33 % entre 2003–2011 y 2012–2025, así que mezclar las eras hacía que el 35 % de los meses 2012+ saliera "por debajo" y el 40 % de los anteriores "por encima" (escala nacional). Con la referencia por era, cada era queda con 27 % abajo y 27 % arriba. No se asume que esa caída sea real ni un efecto del sensor: no está verificado.
 - Se usan mediana, p10, p25, p75 y p90 empíricos.
 - Hacen falta al menos 10 años; si hay menos, se devuelve `categoria = null`.
 
@@ -93,10 +95,10 @@ El [veredicto de armonización](https://github.com/DenisPablo/ML_NasaSpaceApp/bl
 
 | Tema | Qué se midió | Estado en la API |
 |---|---|---|
-| Anomalía entre eras | La referencia mezcla 2001–2011 (estimado) con 2012+ (observado). MODIS crudo baja un 33 % entre esas eras, y en 2012+ el 35 % de los meses sale "por debajo" (lo esperado es 25 %). | Pendiente: usar como referencia solo los años observados, o informar las dos referencias |
+| Anomalía entre eras | La referencia mezcla 2001–2011 (estimado) con 2012+ (observado). MODIS crudo baja un 33 % entre esas eras, y en 2012+ el 35 % de los meses sale "por debajo" (lo esperado es 25 %). | Resuelto: cada mes se compara con los años de su misma era (`referencia`, §6) |
 | Mes parcial en la referencia | Un mes en curso entraba en la muestra de los demás años | Resuelto (`anomalia.py` filtra `parcial`) |
 | Días con MODIS caído | Si la referencia está caída y MODIS también, el estimado sale en 0 o incompleto, sin aviso. Pasa en 72 días sin Terra (2000–2002) y en 201 días con un MODIS caído (2002–2012; en 14 cayeron los dos). Faltan ≈ 12.700 focos VIIRS-equivalentes. | Resuelto: `dias_sin_modis` en la respuesta, máximo ensanchado y confianza `baja` si superan el 10 % de los días estimados (§4 y §5) |
 | Días con cobertura parcial | El criterio "≥ 1 foco nacional" toma como observados 31 días con S-NPP < 0,5 × NOAA-20 (7.054 focos) | Depende de una bandera del pipeline |
 | Respaldo regional | Si se usa el factor de la región en lugar del de la provincia, el sesgo mediano es 7,7 % (Neuquén −29,7 %) | Resuelto: confianza `baja` si más del 50 % del estimado usa factores `region` o `pais` (§5) |
-| Umbral `modis_est ≥ 21` | El error baja de forma continua con la cantidad de focos MODIS; 21 no marca ningún quiebre | Pendiente: basar la confianza en el ancho relativo del rango |
+| Umbral `modis_est ≥ 21` | El error baja de forma continua con la cantidad de focos MODIS; 21 no marca ningún quiebre | Resuelto: `media` exige un rango no más ancho que lo estimado (§5) |
 

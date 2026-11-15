@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.schemas.zonas import PedidoZona
 
+Referencia = Literal["observada", "estimada"]
 Categoria = Literal["muy_por_debajo", "por_debajo", "normal", "por_encima", "muy_por_encima"]
 
 
@@ -16,7 +17,16 @@ class PedidoAnomalia(PedidoZona):
 class Anomalia(BaseModel):
     mes: str = Field(description="Mes evaluado (`YYYY-MM`).")
     valor: float = Field(description="Focos armonizados del mes.")
-    mediana: float | None = Field(description="Mediana del mismo mes en los demás años completos.")
+    referencia: Referencia = Field(
+        description=(
+            "Era con la que se compara: `observada` (meses con `frac_estimada` ≤ 0,1, VIIRS) "
+            "o `estimada` (el resto, a partir de MODIS). El mes evaluado se compara solo con "
+            "años de su misma era (docs/04 §6)."
+        )
+    )
+    mediana: float | None = Field(
+        description="Mediana del mismo mes en los demás años completos de la misma era."
+    )
     p25: float | None = Field(description="Cuartil inferior histórico.")
     p75: float | None = Field(description="Cuartil superior histórico.")
     razon: float | None = Field(description="`valor / mediana`; `null` si la mediana es 0.")
