@@ -58,6 +58,7 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-14**.
 
 - **Datos reales:** el pipeline [`ML_NasaSpaceApp`](https://github.com/DenisPablo/ML_NasaSpaceApp) ya publica la versión `20261114T171326`, que cumple el contrato (esquemas, conteos, factor nacional 3,33). Falta una versión nueva con `fecha_min = 2000-11-01` y `schema_version = 1.1.0` (corrección en la rama `fix/fecha-min-y-schema-version` del pipeline). El contrato ya acepta factores `terra` de hasta 40 y `provincia_id` nulo en `puntos_industriales`.
 - **Rendimiento (R1–R6) y validación científica (S1–S4)** de [06](06-pruebas-y-aceptacion.md): solo se miden con datos reales en el VPS.
+- **Veredicto científico de la armonización:** [informe y scripts](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/analisis/veredicto-armonizacion/README.md) en el pipeline ("sólido con reservas"). Lo que le toca a la API está resumido en [04 §8](04-logica-de-armonizacion.md#8-validación-científica-y-limitaciones-conocidas). Lo que le toca al pipeline: rangos validados hacia adelante y por provincia, rangos para Terra sola, una definición relativa de "día operativo" y cerrar la ventana de calibración `modis` antes de la deriva orbital (2022+).
 - **Despliegue** ([05](05-despliegue.md)): preparar el VPS, configurar Dokploy, cargar el secreto `DOKPLOY_WEBHOOK_URL` (hoy el CI omite ese paso), definir `CORS_ORIGINS` y `RELOAD_TOKEN`, y decidir si la imagen de GHCR es pública.
 - **Integración con el frontend** [`FireHistoryInterface`](https://github.com/smlopezsm/FireHistoryInterface).
 

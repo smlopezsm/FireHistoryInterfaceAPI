@@ -1,6 +1,6 @@
 # 04 · Lógica de armonización en la API
 
-> **Fundamento científico:** ver `propuesta_B_calendario_focos_armonizado_ES.md` / `proposal_B_harmonized_hotspot_calendar_EN.md` (documentación del equipo). Acá se describe **cómo la API aplica** la regla.
+> **Fundamento científico:** [`CLASIFICACION.md`](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/CLASIFICACION.md) del pipeline (cómo se calculan los factores y los rangos) y el [veredicto científico de la armonización](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/analisis/veredicto-armonizacion/veredicto-armonizacion.md) (validación con datos reales y scripts para replicarla). El documento original de la propuesta B no está publicado en ningún repo. Acá se describe **cómo la API aplica** la regla.
 
 ## 1. Regla en una línea
 
@@ -15,7 +15,7 @@
 | 2012-01-20 → 2026-11-02 | **S-NPP** (`n_snpp`) | Terra + Aqua (solo para días con S-NPP caído) | `tipo = modis` |
 | 2026-11-03 → hoy | **NOAA-20** (`n_n20`) | Terra + Aqua (solo para días con N20 caído) | `tipo = modis` |
 
-- S-NPP y NOAA-20 cuentan prácticamente igual (razón 0,99), así que el cambio de referencia **no requiere corrección**.
+- S-NPP y NOAA-20 cuentan prácticamente igual: la razón S-NPP/NOAA-20 medida en 2018-04 → 2026-11 es **1,02** en los días con los dos operativos. Por eso el cambio de referencia **no requiere corrección**.
 - **NOAA-21 nunca se suma**, para no contar dos veces el mismo fuego.
 - Las fechas de esta tabla para la referencia VIIRS **se leen de `metadata.referencia_viirs`** (docs/02 §9): si el pipeline cambia la fecha de paso a NOAA-20, la API la sigue sin cambios de código. Solo se aceptan `SNPP` y `N20`; cualquier otro valor deja la API en estado `degradado`.
 
@@ -50,10 +50,10 @@ ENTRADA: zona (→ conjunto de celdas C), período [desde, hasta], capa
 ## 4. Rango del 80 %
 
 1. Se busca en `rangos.parquet` el tramo donde cae `modis_est_pm`.
-2. Si `modis_est_pm = 0`: `min_pm = 0` y `max_pm = mult_alto` (valor absoluto, por defecto 10 focos), **solo si el mes es 100 % estimado**. En meses mixtos se usa 0.
+2. Si `modis_est_pm = 0`: `min_pm = 0` y `max_pm = mult_alto` (valor absoluto: 9 focos en la versión publicada), **solo si el mes es 100 % estimado**. En meses mixtos se usa 0.
 3. Si no: `min_pm = estimado_pm × mult_bajo` y `max_pm = estimado_pm × mult_alto`.
 
-Sumar los límites provincia por provincia da un rango **conservador** (más ancho que el real) para zonas grandes. Es aceptable para el MVP y está documentado.
+Sumar los límites provincia por provincia da un rango **conservador** (más ancho que el real) para zonas grandes. Es aceptable para el MVP y está documentado. Medido a escala nacional, el rango que resulta de sumar provincias contiene el valor real en el **98,8 %** de los meses: es más un rango del 99 % que uno del 80 %.
 
 ## 5. Confianza
 
@@ -81,3 +81,17 @@ Se evalúa en orden: primero `alta`; "pocos datos" solo baja la confianza de lo 
 | Factor faltante (provincia, mes) | Se usa el de la región de `factores_region_mes.parquet`; si falta, el nacional (`region = Argentina`). `nivel_origen` informa cuál |
 | Días antes de 2000-11-01 | No hay datos: los meses no se devuelven |
 | Diferencia entre SP y NRT | Transparente: la columna `fuente` existe en `focos/`, pero los conteos los unifican |
+
+## 8. Validación científica y limitaciones conocidas
+
+El [veredicto de armonización](https://github.com/DenisPablo/ML_NasaSpaceApp/blob/main/analisis/veredicto-armonizacion/veredicto-armonizacion.md) evalúa este método con los datos publicados y concluye que es **"sólido con reservas"**. Los puntos que afectan a la API son:
+
+| Tema | Qué se midió | Estado en la API |
+|---|---|---|
+| Anomalía entre eras | La referencia mezcla 2001–2011 (estimado) con 2012+ (observado). MODIS crudo baja un 33 % entre esas eras, y en 2012+ el 35 % de los meses sale "por debajo" (lo esperado es 25 %). | Pendiente: usar como referencia solo los años observados, o informar las dos referencias |
+| Mes parcial en la referencia | Un mes en curso entraba en la muestra de los demás años | Resuelto (`anomalia.py` filtra `parcial`) |
+| Días con MODIS caído | Si la referencia está caída y MODIS también, el estimado sale en 0 o incompleto, sin aviso. Pasa en 72 días sin Terra (2000–2002) y en 201 días con un MODIS caído (2002–2012; en 14 cayeron los dos). Faltan ≈ 12.700 focos VIIRS-equivalentes. | Pendiente: contarlos como "sin datos" en `frac_estimada` y en la confianza |
+| Días con cobertura parcial | El criterio "≥ 1 foco nacional" toma como observados 31 días con S-NPP < 0,5 × NOAA-20 (7.054 focos) | Depende de una bandera del pipeline |
+| Respaldo regional | Si se usa el factor de la región en lugar del de la provincia, el sesgo mediano es 7,7 % (Neuquén −29,7 %) | Pendiente: bajar la confianza cuando `nivel_origen ≠ provincia` |
+| Umbral `modis_est ≥ 21` | El error baja de forma continua con la cantidad de focos MODIS; 21 no marca ningún quiebre | Pendiente: basar la confianza en el ancho relativo del rango |
+

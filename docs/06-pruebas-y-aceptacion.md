@@ -12,7 +12,7 @@ En `tests/fixtures/` se incluye un **mini dataset** (menos de 1 MB) con el mismo
 | `factores_provincia_mes.parquet` | Factores fijos y conocidos (por ejemplo `P1` = 3,0 en todos los meses); falta `(P2, mes 5)` para la U8 |
 | `factores_region_mes.parquet` | Factores de respaldo de `R1`, `R2` y `Argentina` (`R2` mes 5 conocido, para la U8) |
 | `satelite_operativo.parquet` | Incluye una caída de S-NPP de 3 días en 2022 |
-| `rangos.parquet` | Los valores de la tabla inicial |
+| `rangos.parquet` | Los valores iniciales de la propuesta (`RANGOS_INICIALES` en `scripts/esquemas.py`; tramo 0 = 10 focos), no los publicados en [02 §6](02-contratos-de-datos.md) |
 
 ## 2. Pruebas unitarias (lógica)
 
