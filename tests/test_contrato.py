@@ -116,6 +116,25 @@ def test_confianza_con_fixtures(cliente: TestClient, periodo: str, confianza: st
         (Acumulado(dias=31, estimados=31, est_modis=21), "media"),  # Terra + Aqua y ≥ 21
         (Acumulado(dias=31, estimados=31, est_modis=20), "baja"),  # ≤ 20 focos
         (Acumulado(dias=31, estimados=31, est_terra=50), "baja"),  # período solo Terra
+        # H9: más del 10 % de los días estimados sin MODIS → baja
+        (Acumulado(dias=31, estimados=31, est_modis=50, sin_modis=4), "baja"),
+        (Acumulado(dias=31, estimados=31, est_modis=50, sin_modis=3), "media"),
+        (Acumulado(dias=31, estimados=3, est_modis=50, sin_modis=1), "alta"),  # frac ≤ 0,1
+        # H13: más de la mitad del estimado con factor regional o nacional → baja
+        (
+            Acumulado(dias=31, estimados=31, est_modis=50, armonizado=150, est_no_provincial=76),
+            "baja",
+        ),
+        (
+            Acumulado(dias=31, estimados=31, est_modis=50, armonizado=150, est_no_provincial=75),
+            "media",
+        ),
+        (
+            Acumulado(
+                dias=31, estimados=10, obs=100, est_modis=50, armonizado=250, est_no_provincial=100
+            ),
+            "baja",
+        ),  # mixto: la mitad se mide sobre lo estimado (150), no sobre el total
     ],
 )
 def test_reglas_de_confianza(acumulado: Acumulado, confianza: str) -> None:

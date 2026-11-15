@@ -52,6 +52,7 @@ ENTRADA: zona (→ conjunto de celdas C), período [desde, hasta], capa
 1. Se busca en `rangos.parquet` el tramo donde cae `modis_est_pm`.
 2. Si `modis_est_pm = 0`: `min_pm = 0` y `max_pm = mult_alto` (valor absoluto: 9 focos en la versión publicada), **solo si el mes es 100 % estimado**. En meses mixtos se usa 0.
 3. Si no: `min_pm = estimado_pm × mult_bajo` y `max_pm = estimado_pm × mult_alto`.
+4. **Días sin MODIS.** Un día estimado sin el MODIS necesario (Terra; Terra + Aqua desde 2002-07-04, según `satelite_operativo`) no aporta focos, así que el estimado puede quedar corto. No se rellena: parte de esos días son probablemente cero fuego real, porque "operativo" se define con ≥ 1 foco nacional. Solo se ensancha el máximo, suponiendo que esos días fueron como el promedio de los estimados con MODIS: `max_pm × dias_estimados / (dias_estimados − dias_sin_modis)`. Si ningún día estimado tuvo MODIS, el máximo no cambia. La respuesta informa `dias_sin_modis`.
 
 Sumar los límites provincia por provincia da un rango **conservador** (más ancho que el real) para zonas grandes. Es aceptable para el MVP y está documentado. Medido a escala nacional, el rango que resulta de sumar provincias contiene el valor real en el **98,8 %** de los meses: es más un rango del 99 % que uno del 80 %.
 
@@ -60,10 +61,14 @@ Sumar los límites provincia por provincia da un rango **conservador** (más anc
 | `confianza` | Condición |
 |---|---|
 | `alta` | `frac_estimada ≤ 0,1` (en cualquier zona, también en provincias con "pocos datos") |
-| `media` | Estimado con MODIS Terra + Aqua y `modis_est ≥ 21` focos en el mes |
-| `baja` | Período solo Terra (antes de 2002-07-04), o `modis_est ≤ 20`, o la zona tiene más del 50 % de su área en provincias marcadas como "pocos datos" (Tierra del Fuego, Santa Cruz, CABA) y el mes tiene `frac_estimada > 0,1` |
+| `media` | Estimado con MODIS Terra + Aqua, `modis_est ≥ 21` focos en el mes y ninguna de las condiciones de `baja` |
+| `baja` | `frac_estimada > 0,1` y al menos una de estas: período solo Terra (antes de 2002-07-04); `modis_est ≤ 20`; la zona tiene más del 50 % de su área en provincias marcadas como "pocos datos" (Tierra del Fuego, Santa Cruz, CABA); `dias_sin_modis` supera el 10 % de los días estimados; o más del 50 % del estimado sale de factores con `nivel_origen` `region` o `pais` |
 
-Se evalúa en orden: primero `alta`; "pocos datos" solo baja la confianza de lo **estimado**, porque un mes observado no depende de los factores.
+Se evalúa en orden: primero `alta`; las condiciones de `baja` solo afectan a lo **estimado**, porque un mes observado no depende de los factores ni de MODIS.
+
+Los dos últimos criterios salen del [veredicto de armonización](#8-validación-científica-y-limitaciones-conocidas):
+- **Días sin MODIS:** el 10 % es el mismo umbral que separa `alta`. Con los datos `20261114T174945`, 90 meses tienen algún día sin MODIS, pero en 58 son solo 1 o 2 días (muchos, probablemente cero fuego real en invierno). Con el umbral, la confianza baja en 25 meses.
+- **Factor no provincial:** dejando cada provincia afuera y usando el factor de su región, el sesgo mediano es 7,7 % (Neuquén −29,7 %). Se mide la parte del estimado (focos × factor) que usa factores `region` o `pais`, sea porque falta el de la provincia o porque el pipeline marcó el factor así (shrinkage). El umbral del 50 % sigue la misma lógica que "pocos datos".
 
 ## 6. Anomalía (mes vs. lo normal)
 
@@ -90,8 +95,8 @@ El [veredicto de armonización](https://github.com/DenisPablo/ML_NasaSpaceApp/bl
 |---|---|---|
 | Anomalía entre eras | La referencia mezcla 2001–2011 (estimado) con 2012+ (observado). MODIS crudo baja un 33 % entre esas eras, y en 2012+ el 35 % de los meses sale "por debajo" (lo esperado es 25 %). | Pendiente: usar como referencia solo los años observados, o informar las dos referencias |
 | Mes parcial en la referencia | Un mes en curso entraba en la muestra de los demás años | Resuelto (`anomalia.py` filtra `parcial`) |
-| Días con MODIS caído | Si la referencia está caída y MODIS también, el estimado sale en 0 o incompleto, sin aviso. Pasa en 72 días sin Terra (2000–2002) y en 201 días con un MODIS caído (2002–2012; en 14 cayeron los dos). Faltan ≈ 12.700 focos VIIRS-equivalentes. | Pendiente: contarlos como "sin datos" en `frac_estimada` y en la confianza |
+| Días con MODIS caído | Si la referencia está caída y MODIS también, el estimado sale en 0 o incompleto, sin aviso. Pasa en 72 días sin Terra (2000–2002) y en 201 días con un MODIS caído (2002–2012; en 14 cayeron los dos). Faltan ≈ 12.700 focos VIIRS-equivalentes. | Resuelto: `dias_sin_modis` en la respuesta, máximo ensanchado y confianza `baja` si superan el 10 % de los días estimados (§4 y §5) |
 | Días con cobertura parcial | El criterio "≥ 1 foco nacional" toma como observados 31 días con S-NPP < 0,5 × NOAA-20 (7.054 focos) | Depende de una bandera del pipeline |
-| Respaldo regional | Si se usa el factor de la región en lugar del de la provincia, el sesgo mediano es 7,7 % (Neuquén −29,7 %) | Pendiente: bajar la confianza cuando `nivel_origen ≠ provincia` |
+| Respaldo regional | Si se usa el factor de la región en lugar del de la provincia, el sesgo mediano es 7,7 % (Neuquén −29,7 %) | Resuelto: confianza `baja` si más del 50 % del estimado usa factores `region` o `pais` (§5) |
 | Umbral `modis_est ≥ 21` | El error baja de forma continua con la cantidad de focos MODIS; 21 no marca ningún quiebre | Pendiente: basar la confianza en el ancho relativo del rango |
 

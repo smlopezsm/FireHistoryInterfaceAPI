@@ -39,6 +39,14 @@ class Punto(BaseModel):
     frac_estimada: float = Field(
         description="Fracción de días estimados (0–1), sobre los días con datos."
     )
+    dias_sin_modis: int = Field(
+        description=(
+            "Días estimados en los que no operó el MODIS necesario (Terra, o Terra + Aqua "
+            "desde 2002-07-04): no aportan focos, así que el estimado puede quedar corto. "
+            "Si es > 0 el máximo se ensancha; si supera el 10 % de los días estimados, "
+            "la confianza de lo estimado es `baja`."
+        )
+    )
     confianza: Confianza = Field(description="`alta`, `media` o `baja` (docs/04 §5).")
     parcial: bool = Field(description="`true` si incluye el mes en curso, todavía incompleto.")
 

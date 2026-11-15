@@ -112,6 +112,7 @@ Matriz **mes × año** para la zona elegida. Es el endpoint central.
 | `maximo` | number | No | Límite superior del rango del 80 % |
 | `estado` | enum | No | `observado`, `estimado` o `mixto` |
 | `frac_estimada` | number | No | Fracción de días del mes que se estimaron (0–1) |
+| `dias_sin_modis` | integer | No | Días estimados en los que no operó el MODIS necesario (Terra; Terra + Aqua desde 2002-07-04). Esos días no aportan focos: el `maximo` se ensancha y, si superan el 10 % de los días estimados, la confianza es `baja` (ver [04](04-logica-de-armonizacion.md#4-rango-del-80-)) |
 | `confianza` | enum | No | `alta`, `media` o `baja` (ver [04](04-logica-de-armonizacion.md#5-confianza)) |
 | `parcial` | boolean | No | `true` si es el mes en curso (todavía incompleto) |
 
@@ -122,9 +123,9 @@ Matriz **mes × año** para la zona elegida. Es el endpoint central.
   "unidad": "focos (escala VIIRS S-NPP)",
   "meses": [
     {"periodo": "2006-08", "modis": 120, "viirs": null, "armonizado": 358.8, "minimo": 262.0, "maximo": 445.0,
-     "estado": "estimado", "frac_estimada": 1.0, "confianza": "media"},
+     "estado": "estimado", "frac_estimada": 1.0, "dias_sin_modis": 0, "confianza": "media"},
     {"periodo": "2020-08", "modis": 410, "viirs": 1290, "armonizado": 1290.0, "minimo": 1290.0, "maximo": 1290.0,
-     "estado": "observado", "frac_estimada": 0.0, "confianza": "alta"}
+     "estado": "observado", "frac_estimada": 0.0, "dias_sin_modis": 0, "confianza": "alta"}
   ],
   "resumen": {"max_mes": "2020-08", "max_anio": 2020, "total": 41234.5, "mediana_mensual": 96.0},
   "data_version": "2026-11-14T09:00:00-03:00"
@@ -216,7 +217,7 @@ y el percentil.
 
 ## `GET|POST /descargas/calendario.csv`
 
-**Columnas:** `periodo, modis, viirs, armonizado, minimo, maximo, estado, frac_estimada, confianza`.
+**Columnas:** `periodo, modis, viirs, armonizado, minimo, maximo, estado, frac_estimada, confianza, dias_sin_modis`.
 
 ## `POST /admin/reload`
 
