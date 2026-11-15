@@ -2,7 +2,6 @@
 
 import csv
 from collections.abc import Iterator
-from datetime import date
 from tempfile import TemporaryFile
 from typing import Annotated, Literal, TextIO
 
@@ -12,10 +11,10 @@ from starlette.background import BackgroundTask
 
 from app.db import Datos
 from app.deps import DatosListosDep, ZonaQueryDep
-from app.errores import ApiError, datos_no_disponibles
 from app.schemas.armonizacion import PedidoCalendario, PeriodoConsulta
 from app.schemas.zonas import DESC_ZONA_RUTA, PedidoZona
 from app.services.armonizacion import calcular_meses, pocos_datos
+from app.services.periodos import periodo_diario
 from app.services.zonas import ZonaResuelta, resolver_zona
 
 router = APIRouter(prefix="/descargas", tags=["descargas"])
@@ -88,19 +87,7 @@ def _focos(
     datos: Datos, pedido: PedidoZona, desde: str, hasta: str, sensor: Sensor, maximo: int
 ) -> StreamingResponse:
     zona = resolver_zona(datos, pedido)
-    metadata = datos.metadata
-    if metadata is None:
-        raise datos_no_disponibles()
-    try:
-        inicio, fin = date.fromisoformat(desde), date.fromisoformat(hasta)
-        if (
-            inicio.isoformat() != desde
-            or fin.isoformat() != hasta
-            or not metadata.fecha_min <= inicio <= fin <= metadata.fecha_max
-        ):
-            raise ValueError
-    except ValueError:
-        raise ApiError(400, "PERIODO_INVALIDO", "Indicá un período válido (YYYY-MM-DD).") from None
+    inicio, fin = periodo_diario(datos, desde, hasta)
 
     filtro = """
         FROM focos WHERE anio BETWEEN ? AND ? AND fecha BETWEEN ? AND ?
