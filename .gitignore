@@ -21,3 +21,6 @@ data/*
 !tests/fixtures/**/*.parquet
 !data/current/**/*.parquet
 !.env.example
+
+# Carpeta local del modelo predictivo (repo separado, no versionar aquí)
+ModeloPredictivo/
