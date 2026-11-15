@@ -1,10 +1,15 @@
 """Pruebas de anomalías históricas."""
 
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.services.anomalia import comparar
+from app.services.anomalia import comparar, primer_mes_observado
 from app.services.armonizacion import Acumulado
+
+INICIO_VIIRS = "2012-02"  # primer mes completo con S-NPP (desde 2012-01-20)
+TODO_OBSERVADO = "2000-01"
 
 
 def test_compara_mismo_mes_y_excluye_evaluado(cliente: TestClient) -> None:
@@ -39,7 +44,7 @@ def test_mes_invalido(cliente: TestClient) -> None:
 
 def test_u10_menos_de_diez_anios() -> None:
     meses = {f"{anio}-08": Acumulado(armonizado=10) for anio in range(2010, 2020)}
-    resultado = comparar(meses, "2019-08")
+    resultado = comparar(meses, "2019-08", inicio_observado=TODO_OBSERVADO)
     assert resultado.anios_usados == 9
     assert resultado.categoria is None
 
@@ -57,7 +62,7 @@ def test_u10_menos_de_diez_anios() -> None:
 def test_categorias_con_historial_suficiente(valor: float, categoria: str) -> None:
     meses = {f"{2010 + i}-08": Acumulado(armonizado=i + 1) for i in range(12)}
     meses["2022-08"] = Acumulado(armonizado=valor)
-    resultado = comparar(meses, "2022-08")
+    resultado = comparar(meses, "2022-08", inicio_observado=TODO_OBSERVADO)
     assert resultado.categoria == categoria
     assert resultado.mediana == 6.5
     assert (resultado.p25, resultado.p75) == (3, 9)
@@ -74,7 +79,7 @@ def test_muestra_excluye_meses_parciales(cliente: TestClient) -> None:
 def test_muestra_excluye_parciales_unitario() -> None:
     meses = {f"{2010 + i}-11": Acumulado(armonizado=5) for i in range(12)}
     meses["2022-11"] = Acumulado(armonizado=1000, parcial=True)
-    resultado = comparar(meses, "2021-11")
+    resultado = comparar(meses, "2021-11", inicio_observado=TODO_OBSERVADO)
     assert resultado.anios_usados == 11
     assert resultado.mediana == 5
 
@@ -91,24 +96,48 @@ def _eras() -> dict[str, Acumulado]:
 
 
 def test_anomalia_compara_con_la_misma_era_observada() -> None:
-    resultado = comparar(_eras(), "2020-08")
+    resultado = comparar(_eras(), "2020-08", inicio_observado=INICIO_VIIRS)
     assert (resultado.referencia, resultado.anios_usados) == ("observada", 13)
     assert (resultado.mediana, resultado.categoria) == (10, "normal")
 
 
 def test_anomalia_compara_con_la_misma_era_estimada() -> None:
-    resultado = comparar(_eras(), "2005-08")
+    resultado = comparar(_eras(), "2005-08", inicio_observado=INICIO_VIIRS)
     assert (resultado.referencia, resultado.anios_usados) == ("estimada", 10)
     assert (resultado.mediana, resultado.categoria) == (100, "normal")
 
 
-def test_era_por_frac_estimada() -> None:
-    # Hasta 10 % de días estimados el mes cuenta como observado.
+def test_era_por_fecha_y_no_por_frac_estimada() -> None:
+    # Un mes de la época VIIRS con la referencia caída muchos días (2022-08 tuvo 10 de 31)
+    # sigue en la era observada: se compara con 2012+ y no con 2001–2011.
     meses = _eras()
-    meses["2016-08"] = Acumulado(dias=31, estimados=3, armonizado=10)
-    meses["2017-08"] = Acumulado(dias=31, estimados=4, armonizado=10)
-    resultado = comparar(meses, "2020-08")
-    assert resultado.anios_usados == 12  # 2017 pasa a la era estimada
+    meses["2022-08"] = Acumulado(dias=31, estimados=10, armonizado=9)
+    resultado = comparar(meses, "2022-08", inicio_observado=INICIO_VIIRS)
+    assert (resultado.referencia, resultado.anios_usados) == ("observada", 13)
+    assert (resultado.mediana, resultado.categoria) == (10, "muy_por_debajo")
+    # Y tampoco sale de la muestra de los demás años observados.
+    assert comparar(meses, "2020-08", inicio_observado=INICIO_VIIRS).anios_usados == 13
+
+
+def test_mes_de_inicio_de_viirs_es_estimado() -> None:
+    # 2012-01 tiene S-NPP desde el 20: es mayormente estimado y va con 2001–2011.
+    meses = {f"{anio}-01": Acumulado(armonizado=100) for anio in range(2001, 2013)}
+    resultado = comparar(meses, "2012-01", inicio_observado=INICIO_VIIRS)
+    assert (resultado.referencia, resultado.anios_usados) == ("estimada", 11)
+
+
+@pytest.mark.parametrize(
+    ("desde", "primer_mes"), [(date(2012, 1, 20), "2012-02"), (date(2026, 11, 1), "2026-11")]
+)
+def test_primer_mes_observado(desde: date, primer_mes: str) -> None:
+    assert primer_mes_observado(desde) == primer_mes
+
+
+def test_anomalia_era_por_fecha_con_fixtures(cliente: TestClient) -> None:
+    for mes, era in [("2012-01", "estimada"), ("2012-02", "observada"), ("2011-12", "estimada")]:
+        r = cliente.get("/api/v1/anomalia", params={"provincia_id": "P1", "mes": mes})
+        assert r.status_code == 200, r.text
+        assert r.json()["referencia"] == era, mes
 
 
 def test_anomalia_informa_referencia(cliente: TestClient) -> None:

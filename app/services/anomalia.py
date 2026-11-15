@@ -1,6 +1,7 @@
 """Comparación de un mes con las observaciones históricas del mismo mes calendario."""
 
 from bisect import bisect_right
+from datetime import date
 from math import ceil
 from statistics import median
 
@@ -25,12 +26,22 @@ def _categoria(valor: float, muestra: list[float]) -> Categoria:
     return "normal"
 
 
-def _era(mes: Acumulado) -> Referencia:
-    """`observada` si a lo sumo el 10 % de los días se estimó (mismo umbral que `alta`)."""
-    return "observada" if mes.estimados <= 0.1 * mes.dias else "estimada"
+def primer_mes_observado(inicio_viirs: date) -> str:
+    """Primer mes (`YYYY-MM`) completo con referencia VIIRS: el de `inicio_viirs` si empieza
+    el día 1, si no el siguiente. Con S-NPP desde 2012-01-20 es `2012-02`."""
+    if inicio_viirs.day == 1:
+        return inicio_viirs.isoformat()[:7]
+    anio, mes = inicio_viirs.year + inicio_viirs.month // 12, inicio_viirs.month % 12 + 1
+    return f"{anio:04d}-{mes:02d}"
 
 
-def comparar(meses: dict[str, Acumulado], mes: str | None) -> Anomalia:
+def _era(periodo: str, inicio_observado: str) -> Referencia:
+    """La era sale de la fecha, no de `frac_estimada`: un mes de la época VIIRS con la
+    referencia caída varios días sigue comparándose con los años observados."""
+    return "observada" if periodo >= inicio_observado else "estimada"
+
+
+def comparar(meses: dict[str, Acumulado], mes: str | None, *, inicio_observado: str) -> Anomalia:
     if mes is None:
         mes = next((p for p in reversed(meses) if not meses[p].parcial), None)
     if mes is None or mes not in meses:
@@ -39,12 +50,15 @@ def comparar(meses: dict[str, Acumulado], mes: str | None) -> Anomalia:
     actual = meses[mes]
     # H1: 2001–2011 (estimado desde MODIS) y 2012+ (observado) tienen niveles distintos;
     # cada mes se compara solo con años de su misma era.
-    era = _era(actual)
+    era = _era(mes, inicio_observado)
     valor = round(actual.armonizado, 1)
     muestra = sorted(
         round(datos.armonizado, 1)
         for periodo, datos in meses.items()
-        if periodo != mes and periodo[5:] == mes[5:] and not datos.parcial and _era(datos) == era
+        if periodo != mes
+        and periodo[5:] == mes[5:]
+        and not datos.parcial
+        and _era(periodo, inicio_observado) == era
     )
     n = len(muestra)
     central = median(muestra) if n else None

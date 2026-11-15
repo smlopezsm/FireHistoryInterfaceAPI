@@ -163,7 +163,7 @@ Compara un mes con el **mismo mes de los demás años de su misma era** de la se
 |---|---|---|
 | `mes` | `YYYY-MM` | Mes evaluado |
 | `valor` | number | Focos armonizados del mes |
-| `referencia` | enum | `observada` (mes con `frac_estimada ≤ 0,1`) o `estimada`: era con la que se compara |
+| `referencia` | enum | `observada` (desde el primer mes completo con VIIRS, `2012-02`) o `estimada` (antes): era con la que se compara |
 | `mediana` | number | Mediana del mismo mes en los demás años completos de la misma era |
 | `p25`, `p75` | number | Cuartiles históricos |
 | `razon` | number | `valor / mediana` (null si la mediana es 0) |
