@@ -12,7 +12,7 @@
 | Datos | **Dentro de la imagen**: la versión publicada en `data/current/` del repo se copia a `/var/data/current` (sin volumen) |
 | Healthcheck | `GET /api/v1/health` cada 30 s, timeout 5 s, 3 reintentos |
 | Tamaño objetivo | Código < 250 MB; total < 400 MB con los datos (~100 MB por versión) |
-| Dependencias | `fastapi`, `uvicorn[standard]`, `duckdb`, `pyarrow`, `pydantic-settings`, `shapely` (validación de polígonos), `orjson` |
+| Dependencias | `fastapi`, `uvicorn[standard]`, `duckdb`, `pyarrow`, `pydantic-settings`, `shapely` (validación de polígonos), `orjson`, `numpy` |
 | **Sin** | `lightgbm`, `scikit-learn`, compiladores |
 
 El archivo vigente es el [`Dockerfile`](../Dockerfile) de la raíz del repo; la tabla de arriba resume sus decisiones.
