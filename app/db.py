@@ -1,8 +1,8 @@
 """Acceso a los datos: una conexión DuckDB por worker, en solo lectura.
 
 DuckDB trabaja en memoria (``:memory:``) con **vistas** sobre los Parquet de
-``DATA_DIR``; no existe un archivo ``.duckdb`` ni se escribe nada. El volumen de datos
-además se monta read-only en el contenedor (docs/05).
+``DATA_DIR``; no existe un archivo ``.duckdb`` ni se escribe nada. En la imagen, los datos
+están en ``/var/data/current`` y el usuario ``app`` solo puede leerlos (docs/05).
 
 Cada consulta usa su propio cursor (seguro entre hilos), con un máximo de consultas
 simultáneas por worker y un corte por tiempo (``QUERY_TIMEOUT_S``).

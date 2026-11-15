@@ -8,7 +8,7 @@ from app.db import Datos
 from app.deps import DatosListosDep, ZonaQueryDep
 from app.schemas.anomalia import Anomalia, PedidoAnomalia
 from app.schemas.armonizacion import PeriodoConsulta
-from app.schemas.zonas import PedidoZona
+from app.schemas.zonas import DESC_ZONA_RUTA, PedidoZona
 from app.services.anomalia import comparar, primer_mes_observado
 from app.services.armonizacion import calcular_meses
 from app.services.zonas import resolver_zona
@@ -30,11 +30,11 @@ def _anomalia(datos: Datos, pedido: PedidoZona, mes: str | None) -> Anomalia:
     "/anomalia",
     summary="Anomalía mensual respecto del histórico",
     description=(
-        "Compara un mes con el mismo mes calendario de los demás años completos (mediana, "
-        "cuartiles, percentil y categoría). La categoría es `null` con menos de 10 años o si el "
-        "mes está incompleto. Sin `mes`, evalúa el último mes completo. La zona es **una sola** "
-        "de `provincia_id` o `bbox` (por query); la versión POST acepta además un polígono "
-        "GeoJSON en `geometria`."
+        "Compara un mes con el mismo mes calendario de los demás años completos **de su misma "
+        "era** (`referencia`: `observada` desde el primer mes completo con VIIRS o `estimada` "
+        "antes): mediana, cuartiles, percentil y categoría. La categoría es `null` con menos de "
+        "10 años o si el mes está incompleto. Sin `mes`, evalúa el último mes completo. "
+        + DESC_ZONA_RUTA
     ),
 )
 def anomalia_get(

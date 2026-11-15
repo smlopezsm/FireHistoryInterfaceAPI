@@ -37,7 +37,7 @@ def tiempo_excedido(segundos: float) -> ApiError:
     )
 
 
-# Errores de ruteo de Starlette (no figuran en docs/03, pero se devuelven con el mismo formato).
+# Errores de ruteo de Starlette, con el mismo formato que los demás (docs/03 §Errores).
 _HTTP_GENERICOS = {
     404: ("RUTA_NO_ENCONTRADA", "La ruta pedida no existe."),
     405: ("METODO_NO_PERMITIDO", "El método HTTP no está permitido en esta ruta."),
