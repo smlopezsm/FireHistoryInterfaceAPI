@@ -11,12 +11,12 @@ from app.errores import datos_no_disponibles
 from app.schemas.zonas import DESC_BBOX, DESC_PROVINCIA, PedidoZona
 
 
-def obtener_datos(request: Request) -> Datos:
+async def obtener_datos(request: Request) -> Datos:
     datos: Datos = request.app.state.datos
     return datos
 
 
-def datos_listos(datos: Annotated[Datos, Depends(obtener_datos)]) -> Datos:
+async def datos_listos(datos: Annotated[Datos, Depends(obtener_datos)]) -> Datos:
     """Exige datos abiertos; si no, responde 503 `DATOS_NO_DISPONIBLES`."""
     if not datos.listo:
         raise datos_no_disponibles()

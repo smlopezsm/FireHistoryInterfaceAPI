@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 
+import anyio
+import anyio.to_thread
+import httpx
+import pytest
 from fastapi.testclient import TestClient
 
+from app.deps import datos_listos, obtener_datos
+from app.routers.health import health
+from app.routers.metadata import metadata
 from tests.conftest import ORIGEN_FRONT
 
 VERSION = "2026-11-14T09:00:00-03:00"
@@ -124,3 +132,31 @@ def test_openapi_en_espanol(cliente: TestClient) -> None:
     assert "/api/v1/metadata" in esquema["paths"]
     assert esquema["paths"]["/api/v1/health"]["get"]["summary"] == "Estado del servicio"
     assert cliente.get("/docs").status_code == 200
+
+
+def test_health_y_metadata_son_async_sin_threadpool(
+    cliente: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert inspect.iscoroutinefunction(health)
+    assert inspect.iscoroutinefunction(metadata)
+    assert inspect.iscoroutinefunction(obtener_datos)
+    assert inspect.iscoroutinefunction(datos_listos)
+
+    def _prohibido(*args: object, **kwargs: object) -> object:
+        raise AssertionError("No debe usar el threadpool de AnyIO")
+
+    monkeypatch.setattr(anyio.to_thread, "run_sync", _prohibido)
+
+    async def _probar() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=cliente.app),
+            base_url="http://test",
+        ) as ac:
+            r_health = await ac.get("/api/v1/health")
+            r_meta = await ac.get("/api/v1/metadata")
+            assert r_health.status_code == 200
+            assert r_health.json()["estado"] == "ok"
+            assert r_meta.status_code == 200
+            assert r_meta.json()["data_version"] == VERSION
+
+    anyio.run(_probar)

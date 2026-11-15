@@ -67,6 +67,12 @@ Documento de traspaso para retomar el backend. Estado al **2026-11-14**.
 - Los CSV se arman en un archivo temporal y después se transmiten: la memoria queda acotada, pero el primer byte llega cuando termina la consulta.
 - Al recargar, la conexión DuckDB anterior la cierra el recolector de Python cuando termina la última petición que la usa (no hay cierre explícito).
 
+### Advertencia sobre rutas síncronas y saturación del threadpool
+
+- **Por qué las rutas con DuckDB son `def` (síncronas):** las consultas DuckDB, el semáforo `threading.BoundedSemaphore` (`max_consultas_concurrentes = 4`), el lock de recarga y la escritura de CSV temporales son bloqueantes. Definir esos endpoints como `def` hace que FastAPI/AnyIO los ejecute en el *worker threadpool* (40 hilos por defecto) sin bloquear el *event loop* de `asyncio`.
+- **Riesgo de saturación para monitoreo y endpoints sin I/O:** si ráfagas de consultas lentas ocupan todos los hilos del pool (hasta `query_timeout_s = 10` s esperando el semáforo o ejecutando), cualquier ruta ligera declarada como `def` —o que dependa de `Depends()` síncronos— queda en cola detrás de ellas y puede hacer fallar el `HEALTHCHECK` de Docker (`--timeout=5s`, `timeout=4` s).
+- **Regla de mantenimiento:** los endpoints que solo leen estado en memoria (`GET /api/v1/health`, `GET /api/v1/metadata`) y sus dependencias compartidas (`obtener_datos`, `datos_listos`) deben mantenerse como `async def` para responder directo en el *event loop*, preservando la fijación de versión por `ContextVar` en `CacheMiddleware`.
+
 ## 6. Entorno local
 
 - Python 3.12 con `uv`: `uv venv --python 3.12 .venv && uv pip install -e ".[dev]"`.
